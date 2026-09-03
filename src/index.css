@@ -71,5 +71,8 @@ html.dark ::-webkit-scrollbar-thumb {
   .print-route {
     break-inside: avoid;
     page-break-inside: avoid;
+    /* Garis warna kiri (penanda armada di layar) tidak perlu di kertas */
+    border-left: none !important;
+    padding-left: 0.375rem !important;
   }
 }

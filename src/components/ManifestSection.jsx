@@ -26,8 +26,7 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
             </p>
           </div>
           <div className="text-right text-[9px] text-slate-500 font-mono">
-            {selectedDate} &bull; {assignedIds.length} stops &bull; {totalWeight.toFixed(1)}/{vehicle.capWeightKg}kg &bull;{' '}
-            {totalCubage.toFixed(2)}/{vehicle.capCubageM3.toFixed(2)}m&sup3;
+            {selectedDate} &bull; {assignedIds.length} stops
           </div>
         </div>
       </div>
@@ -118,7 +117,7 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
                           💬 {order.comments.join(' / ')}
                         </span>
                       )}
-                      <div className="text-[9.5px] print:text-[8px] font-mono font-semibold text-slate-600 dark:text-slate-300 mt-0.5 print:mt-0">
+                      <div className="text-[9.5px] print:hidden font-mono font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
                         &#9878; {order.totalWeightKg.toFixed(1)} kg &middot; {order.totalCubageM3.toFixed(3)} m&sup3;
                       </div>
                     </td>
@@ -129,7 +128,7 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
                             {line.itemName} &times; <strong className="text-slate-900 dark:text-white">{line.qty}</strong> {line.uom}
                             {line.weightSource === 'sizeEstimate' && (
                               <span
-                                className="text-[8px] print:text-[7px] px-1 py-0.5 print:px-0.5 print:py-0 bg-blue-100 dark:bg-blue-500/15 print:bg-transparent text-blue-700 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-500/20 print:border-0 shrink-0"
+                                className="print:hidden text-[8px] px-1 py-0.5 bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-500/20 shrink-0"
                                 title="Berat ditaksir dari Master Tambahan (ukuran), bukan dari Master Item"
                               >
                                 &#8776; estimasi
@@ -137,7 +136,7 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
                             )}
                             {line.missing && (
                               <span
-                                className="text-[8px] print:text-[7px] px-1 py-0.5 print:px-0.5 print:py-0 bg-rose-100 dark:bg-rose-500/15 print:bg-transparent text-rose-700 dark:text-rose-400 rounded border border-rose-200 dark:border-rose-500/20 print:border-0 shrink-0"
+                                className="print:hidden text-[8px] px-1 py-0.5 bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 rounded border border-rose-200 dark:border-rose-500/20 shrink-0"
                                 title="Kode barang tidak ditemukan di Master Item maupun Master Tambahan"
                               >
                                 &#9888; berat n/a
