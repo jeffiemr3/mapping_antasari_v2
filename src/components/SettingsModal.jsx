@@ -47,7 +47,7 @@ export default function SettingsModal({ onClose, fleetRows, onFleetChange }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 no-print">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4 no-print">
       <div className="bg-white dark:bg-[#111218] border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-5 space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="font-display font-bold text-slate-900 dark:text-white">Pengaturan</h2>

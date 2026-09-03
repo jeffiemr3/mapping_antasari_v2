@@ -12,6 +12,7 @@ import ReschedulePanel from './components/ReschedulePanel';
 import MapView from './components/MapView';
 import ManifestSection from './components/ManifestSection';
 import SettingsModal from './components/SettingsModal';
+import SizeWeightModal from './components/SizeWeightModal';
 import Footer from './components/Footer';
 
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -23,6 +24,7 @@ import { getOrPromptApiKey, geocodeAddress } from './utils/geocode';
 import { DEFAULT_WAREHOUSE } from './data/constants';
 import { toDDMMYYYY } from './utils/format';
 import fleetSeed from './data/fleetSeed.json';
+import sizeWeightSeed from './data/sizeWeightSeed.json';
 
 const EMPTY_DISPATCH = { drivers: [], assignments: [], unallocated: [] };
 
@@ -32,6 +34,7 @@ export default function App() {
   // ---- Data mentah (persisten di localStorage) ---------------------------
   const [rawLines, setRawLines] = useLocalStorage(STORAGE_KEYS.ORDERS, []);
   const [customCatalog, setCustomCatalog] = useLocalStorage('m10_custom_catalog', {});
+  const [sizeWeightRows, setSizeWeightRows] = useLocalStorage('m10_size_weight_master', sizeWeightSeed);
   const [fleetRows, setFleetRows] = useLocalStorage(STORAGE_KEYS.FLEET, fleetSeed);
   const [warehouse, setWarehouse] = useLocalStorage(STORAGE_KEYS.WAREHOUSE, DEFAULT_WAREHOUSE);
   const [dispatch, setDispatch] = useLocalStorage(STORAGE_KEYS.ALLOCATIONS, EMPTY_DISPATCH);
@@ -46,6 +49,7 @@ export default function App() {
   // ---- State transien (tidak perlu disimpan) ------------------------------
   const [focusedVehicleIdx, setFocusedVehicleIdx] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sizeWeightOpen, setSizeWeightOpen] = useState(false);
   const [geocodingId, setGeocodingId] = useState(null);
   const [geocodeError, setGeocodeError] = useState(null);
 
@@ -60,6 +64,7 @@ export default function App() {
   const { ordersMap, orderIdsForDate } = useOrders({
     rawLines,
     customCatalog,
+    sizeWeightRows,
     selectedDate,
     cumulativeMode,
   });
@@ -157,6 +162,7 @@ export default function App() {
         onCustomCatalogChange={setCustomCatalog}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onOpenSizeWeight={() => setSizeWeightOpen(true)}
       />
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 space-y-4">
@@ -276,6 +282,9 @@ export default function App() {
       <Footer />
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} fleetRows={fleetRows} onFleetChange={setFleetRows} />}
+      {sizeWeightOpen && (
+        <SizeWeightModal onClose={() => setSizeWeightOpen(false)} rows={sizeWeightRows} onRowsChange={setSizeWeightRows} />
+      )}
     </div>
   );
 }

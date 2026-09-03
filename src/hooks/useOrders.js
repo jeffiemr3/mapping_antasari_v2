@@ -1,17 +1,23 @@
 import { useMemo } from 'react';
 import { aggregateOrderLines } from '../utils/excelImport';
+import { buildSizeWeightMap } from '../utils/sizeWeight';
 import { parseDDMMYYYY } from '../utils/format';
 import defaultCatalog from '../data/productCatalog.json';
 
 /**
- * Gabungkan baris nota mentah + katalog produk (default + kustom) menjadi
- * peta order teragregasi per NPno, dan daftar NPno yang relevan untuk
- * tanggal yang dipilih (mode kumulatif atau tanggal persis).
+ * Gabungkan baris nota mentah + katalog produk (default + kustom) + tabel
+ * Master Tambahan (cadangan berat per ukuran) menjadi peta order teragregasi
+ * per NPno, dan daftar NPno yang relevan untuk tanggal yang dipilih (mode
+ * kumulatif atau tanggal persis).
  */
-export function useOrders({ rawLines, customCatalog, selectedDate, cumulativeMode }) {
+export function useOrders({ rawLines, customCatalog, sizeWeightRows, selectedDate, cumulativeMode }) {
   const catalog = useMemo(() => ({ ...defaultCatalog, ...customCatalog }), [customCatalog]);
+  const sizeWeightMap = useMemo(() => buildSizeWeightMap(sizeWeightRows), [sizeWeightRows]);
 
-  const ordersMap = useMemo(() => aggregateOrderLines(rawLines, catalog), [rawLines, catalog]);
+  const ordersMap = useMemo(
+    () => aggregateOrderLines(rawLines, catalog, sizeWeightMap),
+    [rawLines, catalog, sizeWeightMap]
+  );
 
   const orderIdsForDate = useMemo(() => {
     if (!selectedDate) return [];

@@ -122,8 +122,24 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
                           key={li}
                           className="flex justify-between items-center gap-2 text-[10px] leading-tight border-b border-slate-100 dark:border-white/5 pb-0.5"
                         >
-                          <span className="text-slate-600 dark:text-slate-300">
+                          <span className="text-slate-600 dark:text-slate-300 flex items-center gap-1">
                             {line.itemName} &times; <strong className="text-slate-900 dark:text-white">{line.qty}</strong> {line.uom}
+                            {line.weightSource === 'sizeEstimate' && (
+                              <span
+                                className="text-[8px] px-1 py-0.5 bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-500/20 shrink-0"
+                                title="Berat ditaksir dari Master Tambahan (ukuran), bukan dari Master Item"
+                              >
+                                ≈ estimasi ukuran
+                              </span>
+                            )}
+                            {line.missing && (
+                              <span
+                                className="text-[8px] px-1 py-0.5 bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 rounded border border-rose-200 dark:border-rose-500/20 shrink-0"
+                                title="Kode barang tidak ditemukan di Master Item maupun Master Tambahan"
+                              >
+                                ⚠ berat tidak diketahui
+                              </span>
+                            )}
                           </span>
                           {line.comment && (
                             <span className="px-1 py-0.5 bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[8px] rounded font-medium border border-amber-200 dark:border-amber-500/20 shrink-0 max-w-28 truncate">

@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Truck, Upload, PackagePlus, Moon, Sun } from 'lucide-react';
+import { Truck, Upload, PackagePlus, Ruler, Moon, Sun } from 'lucide-react';
 import {
   parseOrdersExcel,
   parseOrdersCSV,
@@ -8,7 +8,15 @@ import {
   parseCustomCatalogExcel,
 } from '../utils/excelImport';
 
-export default function Header({ rawLines, onRawLinesChange, customCatalog, onCustomCatalogChange, theme, onToggleTheme }) {
+export default function Header({
+  rawLines,
+  onRawLinesChange,
+  customCatalog,
+  onCustomCatalogChange,
+  theme,
+  onToggleTheme,
+  onOpenSizeWeight,
+}) {
   const ordersInputRef = useRef(null);
   const catalogInputRef = useRef(null);
 
@@ -89,6 +97,15 @@ export default function Header({ rawLines, onRawLinesChange, customCatalog, onCu
         >
           <PackagePlus className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
           Master Item
+        </button>
+
+        <button
+          onClick={onOpenSizeWeight}
+          title="Cadangan berat/box berdasarkan ukuran, dipakai kalau kode barang tidak ada di Master Item"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1c1d26] cursor-pointer"
+        >
+          <Ruler className="w-3.5 h-3.5 text-orange-500" />
+          Master Tambahan
         </button>
 
         <button

@@ -1,0 +1,12 @@
+[
+  { "ukuran": "40X40", "klasifikasi": "UK. STANDAR", "beratKg": 20 },
+  { "ukuran": "30X60", "klasifikasi": "UK. STANDAR", "beratKg": 20 },
+  { "ukuran": "50X50", "klasifikasi": "UK. STANDAR", "beratKg": 20 },
+  { "ukuran": "60X60", "klasifikasi": "UK. STANDAR", "beratKg": 28 },
+  { "ukuran": "80X80", "klasifikasi": "UK. BESAR", "beratKg": 42 },
+  { "ukuran": "60X120", "klasifikasi": "UK. BESAR", "beratKg": 48 },
+  { "ukuran": "100X100", "klasifikasi": "UK. BESAR", "beratKg": 52 },
+  { "ukuran": "90X180", "klasifikasi": "BIG SLAB", "beratKg": 25 },
+  { "ukuran": "120X240", "klasifikasi": "BIG SLAB", "beratKg": 62 },
+  { "ukuran": "160X320", "klasifikasi": "BIG SLAB", "beratKg": 142 }
+]

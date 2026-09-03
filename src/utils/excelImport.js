@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import { lookupFallbackWeight } from './sizeWeight.js';
 
 // =============================================================================
 // Import "Data Penjualan / Nota" (pesanan pengiriman)
@@ -130,11 +131,17 @@ export function mergeOrderLinesByPromisedDate(existingLines, newLines) {
  * menjadi satu order per NPno, sambil menghitung total berat & kubikasi dari
  * katalog produk (weight_gr, cubage_cm3 per Item No dikali qty).
  *
+ * Kalau kode barang TIDAK ada di katalog, dicoba dulu jalur cadangan
+ * "Master Tambahan": tebak ukuran dari nama barang (mis. "70X70"), cari
+ * berat/box-nya di sizeWeightMap. Kalau ketemu, berat terisi (estimasi),
+ * tapi volume tetap 0 karena tabel ini tidak punya data kubikasi.
+ *
  * @param {Array} lines - hasil parseOrders*
  * @param {Record<string, {name:string, weight_gr:number, cubage_cm3:number}>} catalog
+ * @param {Record<string, {klasifikasi:string, beratKg:number}>} [sizeWeightMap] - dari Master Tambahan
  * @returns {Record<string, object>} NPno -> order teragregasi
  */
-export function aggregateOrderLines(lines, catalog) {
+export function aggregateOrderLines(lines, catalog, sizeWeightMap = {}) {
   const orders = {};
   lines.forEach((line) => {
     if (!orders[line.NPno]) {
@@ -164,11 +171,20 @@ export function aggregateOrderLines(lines, catalog) {
     const qty = line.QtyOutstanding || 0;
     let weightKg = 0;
     let cubageM3 = 0;
+    let weightSource = 'catalog';
     if (product) {
       weightKg = ((product.weight_gr || 0) * qty) / 1000;
       cubageM3 = ((product.cubage_cm3 || 0) * qty) / 1e6;
     } else {
-      order.missingItemData = true;
+      const fallback = lookupFallbackWeight(line.ItemName, sizeWeightMap);
+      if (fallback) {
+        weightKg = fallback.beratKg * qty;
+        weightSource = 'sizeEstimate';
+        // Volume tidak diketahui dari Master Tambahan (cuma ada data berat).
+      } else {
+        weightSource = 'unknown';
+        order.missingItemData = true;
+      }
     }
     order.totalWeightKg += weightKg;
     order.totalCubageM3 += cubageM3;
@@ -184,7 +200,8 @@ export function aggregateOrderLines(lines, catalog) {
       uom: line.UOM,
       weightKg,
       cubageM3,
-      missing: !product,
+      missing: weightSource === 'unknown',
+      weightSource,
       comment,
     });
   });
