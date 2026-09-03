@@ -1,17 +1,22 @@
 import { useMemo, useState } from 'react';
-import { Printer } from 'lucide-react';
+import { Settings, Truck } from 'lucide-react';
 
 import Header from './components/Header';
-import ImportPanel from './components/ImportPanel';
-import ControlPanel from './components/ControlPanel';
-import VehicleCard from './components/VehicleCard';
+import Toolbar from './components/Toolbar';
+import FleetPicker from './components/FleetPicker';
+import StatsRow from './components/StatsRow';
+import FleetOverviewCard from './components/FleetOverviewCard';
+import AmsenExclusionSection from './components/AmsenExclusionSection';
 import UnallocatedList from './components/UnallocatedList';
-import MapView from './components/MapView';
-import SettingsModal from './components/SettingsModal';
 import ReschedulePanel from './components/ReschedulePanel';
+import MapView from './components/MapView';
+import ManifestSection from './components/ManifestSection';
+import SettingsModal from './components/SettingsModal';
+import Footer from './components/Footer';
 
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useOrders } from './hooks/useOrders';
+import { useTheme } from './hooks/useTheme';
 import { STORAGE_KEYS } from './utils/storage';
 import { autoAllocate, fleetRowKey } from './utils/allocation';
 import { getOrPromptApiKey, geocodeAddress } from './utils/geocode';
@@ -22,6 +27,8 @@ import fleetSeed from './data/fleetSeed.json';
 const EMPTY_DISPATCH = { drivers: [], assignments: [], unallocated: [] };
 
 export default function App() {
+  const { theme, toggleTheme } = useTheme();
+
   // ---- Data mentah (persisten di localStorage) ---------------------------
   const [rawLines, setRawLines] = useLocalStorage(STORAGE_KEYS.ORDERS, []);
   const [customCatalog, setCustomCatalog] = useLocalStorage('m10_custom_catalog', {});
@@ -69,6 +76,15 @@ export default function App() {
     [dispatch.unallocated, allAssignedIds, ordersMap]
   );
 
+  const totalWeightForDate = useMemo(
+    () => orderIdsForDate.reduce((sum, id) => sum + (ordersMap[id]?.totalWeightKg || 0), 0),
+    [orderIdsForDate, ordersMap]
+  );
+  const totalCubageForDate = useMemo(
+    () => orderIdsForDate.reduce((sum, id) => sum + (ordersMap[id]?.totalCubageM3 || 0), 0),
+    [orderIdsForDate, ordersMap]
+  );
+
   function getEligibleIds() {
     return orderIdsForDate.filter((id) => !(excludeAmsen && ordersMap[id]?.hasAmsenComment));
   }
@@ -103,11 +119,15 @@ export default function App() {
     }));
   }
 
-  function handleRemoveStop(orderId, vehicleIdx) {
+  function handleMoveStop(orderId, fromIdx, toIdx) {
+    if (fromIdx === toIdx) return;
     setDispatch((d) => ({
       ...d,
-      assignments: d.assignments.map((arr, i) => (i === vehicleIdx ? arr.filter((id) => id !== orderId) : arr)),
-      unallocated: [...d.unallocated, orderId],
+      assignments: d.assignments.map((arr, i) => {
+        if (i === fromIdx) return arr.filter((id) => id !== orderId);
+        if (i === toIdx) return [...arr, orderId];
+        return arr;
+      }),
     }));
   }
 
@@ -120,9 +140,7 @@ export default function App() {
     setGeocodeError(null);
     try {
       const result = await geocodeAddress(order, apiKey);
-      setRawLines((lines) =>
-        lines.map((l) => (l.NPno === orderId ? { ...l, Lat: result.lat, Lng: result.lng } : l))
-      );
+      setRawLines((lines) => lines.map((l) => (l.NPno === orderId ? { ...l, Lat: result.lat, Lng: result.lng } : l)));
     } catch (err) {
       setGeocodeError(err.message);
     } finally {
@@ -130,125 +148,134 @@ export default function App() {
     }
   }
 
-  const vehicleCount = dispatch.drivers.length;
-
   return (
     <div className="min-h-screen flex flex-col">
-      <Header onOpenSettings={() => setSettingsOpen(true)} />
+      <Header
+        rawLines={rawLines}
+        onRawLinesChange={setRawLines}
+        customCatalog={customCatalog}
+        onCustomCatalogChange={setCustomCatalog}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[320px_1fr_380px] gap-4 p-4">
-        {/* Kolom kiri: import & kontrol */}
-        <aside className="space-y-5 no-print">
-          <div className="bg-[#111218] border border-white/5 rounded-2xl p-4">
-            <ImportPanel rawLines={rawLines} onChange={setRawLines} />
-          </div>
-          <div className="bg-[#111218] border border-white/5 rounded-2xl p-4">
-            <ControlPanel
-              selectedDate={selectedDate}
-              onSelectedDateChange={setSelectedDate}
-              cumulativeMode={cumulativeMode}
-              onCumulativeModeChange={setCumulativeMode}
-              excludeAmsen={excludeAmsen}
-              onExcludeAmsenChange={setExcludeAmsen}
-              maxLoadPercent={maxLoadPercent}
-              onMaxLoadPercentChange={setMaxLoadPercent}
-              warehouse={warehouse}
-              onWarehouseChange={setWarehouse}
-              fleetRows={fleetRows}
-              activeFleetKeys={activeFleetKeys}
-              onActiveFleetKeysChange={setActiveFleetKeys}
-              onAutoMapping={handleAutoMapping}
-              onReset={handleReset}
-            />
-          </div>
-          <div className="bg-[#111218] border border-white/5 rounded-2xl p-4">
-            <ReschedulePanel rawLines={rawLines} onRawLinesChange={setRawLines} ordersMap={ordersMap} />
-          </div>
-        </aside>
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 space-y-4">
+        <Toolbar
+          selectedDate={selectedDate}
+          onSelectedDateChange={setSelectedDate}
+          warehouse={warehouse}
+          onWarehouseChange={setWarehouse}
+          maxLoadPercent={maxLoadPercent}
+          onMaxLoadPercentChange={setMaxLoadPercent}
+          cumulativeMode={cumulativeMode}
+          onCumulativeModeChange={setCumulativeMode}
+          excludeAmsen={excludeAmsen}
+          onExcludeAmsenChange={setExcludeAmsen}
+          onAutoMapping={handleAutoMapping}
+          onReset={handleReset}
+        />
 
-        {/* Kolom tengah: peta */}
-        <main className="space-y-3">
-          <div className="bg-[#111218] border border-white/5 rounded-2xl p-2 no-print" style={{ height: 460 }}>
-            <MapView
-              assignments={dispatch.assignments}
-              ordersMap={ordersMap}
-              warehouse={warehouse}
-              focusedVehicleIdx={focusedVehicleIdx}
-            />
+        <div className="flex items-start gap-2">
+          <div className="flex-1">
+            <FleetPicker fleetRows={fleetRows} activeFleetKeys={activeFleetKeys} onActiveFleetKeysChange={setActiveFleetKeys} />
           </div>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            title="Pengaturan lanjutan (API key & import armada)"
+            className="no-print shrink-0 p-3 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#111218] text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        </div>
 
-          <div className="flex items-center justify-between no-print">
-            <p className="text-xs text-slate-400">
-              {orderIdsForDate.length} nota untuk tanggal {selectedDate || '-'} &middot; {vehicleCount} armada aktif
+        <StatsRow
+          totalNota={orderIdsForDate.length}
+          allocatedCount={allAssignedIds.size}
+          unallocatedCount={orderIdsForDate.length - allAssignedIds.size}
+          totalWeightKg={totalWeightForDate}
+          totalCubageM3={totalCubageForDate}
+        />
+
+        <section className="space-y-3 no-print">
+          <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+            <Truck className="w-4 h-4 text-orange-500" />
+            Armada Logistik ({dispatch.drivers.length} Rute Aktif)
+          </h3>
+          {dispatch.drivers.length === 0 ? (
+            <p className="text-xs text-slate-500">
+              Belum ada armada aktif. Import data nota, pilih tanggal, lalu klik &quot;Auto Mapping&quot;.
             </p>
-            <div className="flex items-center gap-2">
-              {focusedVehicleIdx !== null && (
-                <button
-                  onClick={() => setFocusedVehicleIdx(null)}
-                  className="text-xs text-slate-400 hover:text-white cursor-pointer"
-                >
-                  Tampilkan Semua Rute ×
-                </button>
-              )}
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-950 bg-teal-400 hover:bg-teal-300 px-3 py-2 rounded-xl cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                Cetak Semua Rute (Ramping &amp; Hemat Kertas)
-              </button>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {dispatch.drivers.map((vehicle, idx) => (
+                <FleetOverviewCard
+                  key={idx}
+                  vehicle={vehicle}
+                  vehicleIndex={idx}
+                  assignedIds={dispatch.assignments[idx] || []}
+                  ordersMap={ordersMap}
+                  isFocused={focusedVehicleIdx === idx}
+                  onToggleFocus={() => setFocusedVehicleIdx((v) => (v === idx ? null : idx))}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <AmsenExclusionSection
+          orderIds={amsenIdsToShow}
+          ordersMap={ordersMap}
+          vehicles={dispatch.drivers}
+          onManualAllocate={handleManualAllocate}
+          onGeocode={handleGeocode}
+          geocodingId={geocodingId}
+        />
+
+        {geocodeError && <p className="text-xs text-rose-500 no-print">{geocodeError}</p>}
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start">
+          <div className="bg-white dark:bg-[#111218] border border-slate-200 dark:border-white/5 rounded-2xl p-3 no-print" style={{ height: 480 }}>
+            <h4 className="font-display font-bold text-xs text-slate-900 dark:text-white mb-2 px-1">
+              🗺️ Peta Jalur Rute Pengiriman
+            </h4>
+            <div style={{ height: 'calc(100% - 24px)' }}>
+              <MapView
+                drivers={dispatch.drivers}
+                assignments={dispatch.assignments}
+                ordersMap={ordersMap}
+                warehouse={warehouse}
+                focusedVehicleIdx={focusedVehicleIdx}
+                onFocusVehicle={setFocusedVehicleIdx}
+              />
             </div>
           </div>
 
-          {geocodeError && <p className="text-xs text-rose-400 no-print">{geocodeError}</p>}
+          <div className="space-y-4">
+            <ReschedulePanel rawLines={rawLines} onRawLinesChange={setRawLines} ordersMap={ordersMap} />
+            <UnallocatedList
+              unallocatedIds={unallocatedIdsToShow}
+              ordersMap={ordersMap}
+              vehicles={dispatch.drivers}
+              onManualAllocate={handleManualAllocate}
+              onGeocode={handleGeocode}
+              geocodingId={geocodingId}
+            />
+          </div>
+        </div>
 
-          <UnallocatedList
-            amsenIds={amsenIdsToShow}
-            unallocatedIds={unallocatedIdsToShow}
-            ordersMap={ordersMap}
-            vehicles={dispatch.drivers}
-            onManualAllocate={handleManualAllocate}
-            onGeocode={handleGeocode}
-            geocodingId={geocodingId}
-          />
-        </main>
-
-        {/* Kolom kanan: manifest per armada */}
-        <aside className="space-y-3">
-          <h3 className="font-display font-bold text-sm text-white no-print">
-            Manifest Jalan Armada Pengiriman
-          </h3>
-          {dispatch.drivers.length === 0 ? (
-            <p className="text-xs text-slate-500 no-print">
-              Belum ada armada aktif. Import data nota, pilih tanggal, lalu klik "Auto Mapping".
-            </p>
-          ) : (
-            dispatch.drivers.map((vehicle, idx) => (
-              <VehicleCard
-                key={idx}
-                vehicle={vehicle}
-                vehicleIndex={idx}
-                assignedIds={dispatch.assignments[idx] || []}
-                ordersMap={ordersMap}
-                isFocused={focusedVehicleIdx === idx}
-                onToggleFocus={() => setFocusedVehicleIdx((v) => (v === idx ? null : idx))}
-                onRemoveStop={handleRemoveStop}
-                vehicleCount={vehicleCount}
-              />
-            ))
-          )}
-        </aside>
-      </div>
-
-      {settingsOpen && (
-        <SettingsModal
-          onClose={() => setSettingsOpen(false)}
-          fleetRows={fleetRows}
-          onFleetChange={setFleetRows}
-          customCatalog={customCatalog}
-          onCustomCatalogChange={setCustomCatalog}
+        <ManifestSection
+          drivers={dispatch.drivers}
+          assignments={dispatch.assignments}
+          ordersMap={ordersMap}
+          selectedDate={selectedDate}
+          onMoveStop={handleMoveStop}
+          focusedVehicleIdx={focusedVehicleIdx}
         />
-      )}
+      </main>
+
+      <Footer />
+
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} fleetRows={fleetRows} onFleetChange={setFleetRows} />}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
+import { Factory } from 'lucide-react';
 import { ROUTE_COLORS } from '../data/constants';
 
-export default function MapView({ assignments, ordersMap, warehouse, focusedVehicleIdx }) {
+export default function MapView({ drivers, assignments, ordersMap, warehouse, focusedVehicleIdx, onFocusVehicle }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const routeLayerRef = useRef(null);
@@ -88,5 +89,34 @@ export default function MapView({ assignments, ordersMap, warehouse, focusedVehi
     }
   }, [assignments, ordersMap, warehouse, focusedVehicleIdx]);
 
-  return <div ref={containerRef} className="w-full h-full rounded-2xl overflow-hidden" style={{ minHeight: 400 }} />;
+  return (
+    <div className="flex flex-col h-full gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 no-print">
+        {drivers.map((v, idx) => {
+          const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+          const active = focusedVehicleIdx === idx;
+          return (
+            <button
+              key={idx}
+              onClick={() => onFocusVehicle(active ? null : idx)}
+              className={`flex items-center gap-1.5 text-[10.5px] font-semibold px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
+                active
+                  ? 'border-transparent text-white'
+                  : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1c1d26]'
+              }`}
+              style={active ? { backgroundColor: color } : undefined}
+            >
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+              {v.vehicle}
+            </button>
+          );
+        })}
+        <span className="flex items-center gap-1.5 text-[10.5px] font-semibold px-2.5 py-1 rounded-full border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400">
+          <Factory className="w-3 h-3" />
+          Gudang
+        </span>
+      </div>
+      <div ref={containerRef} className="w-full flex-1 rounded-2xl overflow-hidden" style={{ minHeight: 380 }} />
+    </div>
+  );
 }

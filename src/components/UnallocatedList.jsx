@@ -1,130 +1,115 @@
-import { AlertTriangle, Sparkles } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Search, MapPin, Phone, Sparkles } from 'lucide-react';
 
-function OrderTable({ orderIds, ordersMap, vehicles, onManualAllocate, onGeocode, geocodingId }) {
+function UnallocatedCard({ order, vehicles, onManualAllocate, onGeocode, geocodingId }) {
+  const missingCoords = !order.lat || !order.lng;
   return (
-    <div className="overflow-x-auto rounded-xl border border-white/5 bg-[#111218]">
-      <table className="w-full text-xs text-slate-300">
-        <thead>
-          <tr className="bg-[#151720] border-b border-white/5 text-left font-bold text-slate-300">
-            <th className="p-3">NPno</th>
-            <th className="p-3">Pelanggan</th>
-            <th className="p-3">Alamat</th>
-            <th className="p-3">Komentar</th>
-            <th className="p-3 text-right">Alokasikan Manual</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/5">
-          {orderIds.map((id) => {
-            const order = ordersMap[id];
-            if (!order) return null;
-            const missingCoords = !order.lat || !order.lng;
-            return (
-              <tr key={id} className="hover:bg-[#151720]/40">
-                <td className="p-3 font-mono text-[11px]">{order.NPno}</td>
-                <td className="p-3 font-bold text-white">{order.customer}</td>
-                <td className="p-3 text-slate-400 max-w-sm truncate">{order.address}</td>
-                <td className="p-3">
-                  {order.comments.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 text-[10px] border border-amber-500/20">
-                      {order.comments.join('; ')}
-                    </span>
-                  )}
-                </td>
-                <td className="p-3 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {missingCoords && (
-                      <button
-                        onClick={() => onGeocode(id)}
-                        disabled={geocodingId === id}
-                        className="text-[10px] text-teal-400 hover:text-teal-300 font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                        title="Cari koordinat pakai AI"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        {geocodingId === id ? 'Mencari…' : 'AI Geocode'}
-                      </button>
-                    )}
-                    <select
-                      defaultValue=""
-                      onChange={(e) => {
-                        if (e.target.value !== '') onManualAllocate(id, parseInt(e.target.value, 10));
-                        e.target.value = '';
-                      }}
-                      className="text-[10px] bg-[#1c1d26] border border-white/10 rounded-lg px-2 py-1 cursor-pointer"
-                    >
-                      <option value="" disabled>
-                        Pilih armada…
-                      </option>
-                      {vehicles.map((v, idx) => (
-                        <option key={idx} value={idx}>
-                          {v.driver} &middot; {v.vehicle}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="bg-slate-50 dark:bg-[#151720] border border-slate-200 dark:border-white/5 rounded-xl p-3 space-y-1.5">
+      <p className="font-mono text-[10px] text-slate-400">{order.NPno}</p>
+      <p className="font-bold text-sm text-slate-900 dark:text-white">{order.customer}</p>
+      <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-1">
+        <MapPin className="w-3 h-3 shrink-0 mt-0.5" />
+        {order.address}
+      </p>
+      {order.phone && (
+        <p className="text-[11px] flex items-center gap-1">
+          <Phone className="w-3 h-3 text-emerald-500" />
+          <a href={`tel:${order.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+            {order.phone}
+          </a>
+        </p>
+      )}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[10px] font-mono bg-white dark:bg-[#1c1d26] border border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">
+          {order.totalWeightKg.toFixed(1)} kg &middot; {order.totalCubageM3.toFixed(3)} m&sup3;
+        </span>
+        <span className="text-[10px] bg-white dark:bg-[#1c1d26] border border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">
+          {order.lines.length} Item
+        </span>
+        {missingCoords && (
+          <button
+            onClick={() => onGeocode(order.NPno)}
+            disabled={geocodingId === order.NPno}
+            className="text-[10px] text-teal-600 dark:text-teal-400 hover:text-teal-700 font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+          >
+            <Sparkles className="w-3 h-3" />
+            {geocodingId === order.NPno ? 'Mencari…' : 'AI Geocode'}
+          </button>
+        )}
+      </div>
+      <select
+        defaultValue=""
+        onChange={(e) => {
+          if (e.target.value !== '') onManualAllocate(order.NPno, parseInt(e.target.value, 10));
+          e.target.value = '';
+        }}
+        className="w-full text-xs bg-white dark:bg-[#1c1d26] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1.5 cursor-pointer"
+      >
+        <option value="" disabled>
+          Manual Alokasi Kendaraan…
+        </option>
+        {vehicles.map((v, idx) => (
+          <option key={idx} value={idx}>
+            🚚 {v.vehicle}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
 
-export default function UnallocatedList({
-  amsenIds,
-  unallocatedIds,
-  ordersMap,
-  vehicles,
-  onManualAllocate,
-  onGeocode,
-  geocodingId,
-}) {
-  return (
-    <div className="space-y-4 no-print">
-      {amsenIds.length > 0 && (
-        <section className="bg-amber-950/15 border border-amber-500/20 rounded-2xl p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
-            <div>
-              <h4 className="font-display font-bold text-sm text-amber-400">
-                🚫 Dikecualikan Otomatis: Komentar &quot;Amsen&quot;
-              </h4>
-              <p className="text-[11px] text-slate-300">
-                Ada {amsenIds.length} nota yang berlabel amsen. Nota ini dikeluarkan dari algoritma auto mapping, silakan
-                alokasikan secara manual jika supir sudah siap.
-              </p>
-            </div>
-          </div>
-          <OrderTable
-            orderIds={amsenIds}
-            ordersMap={ordersMap}
-            vehicles={vehicles}
-            onManualAllocate={onManualAllocate}
-            onGeocode={onGeocode}
-            geocodingId={geocodingId}
-          />
-        </section>
-      )}
+export default function UnallocatedList({ unallocatedIds, ordersMap, vehicles, onManualAllocate, onGeocode, geocodingId }) {
+  const [search, setSearch] = useState('');
 
-      {unallocatedIds.length > 0 && (
-        <section className="bg-[#151720] border border-white/5 rounded-2xl p-4 space-y-3">
-          <div>
-            <h4 className="font-display font-bold text-sm text-white">Belum Teralokasi</h4>
-            <p className="text-[11px] text-slate-400">
-              {unallocatedIds.length} nota belum masuk rute (kapasitas armada penuh, atau koordinat belum ditemukan).
-            </p>
-          </div>
-          <OrderTable
-            orderIds={unallocatedIds}
-            ordersMap={ordersMap}
-            vehicles={vehicles}
-            onManualAllocate={onManualAllocate}
-            onGeocode={onGeocode}
-            geocodingId={geocodingId}
-          />
-        </section>
-      )}
-    </div>
+  const filtered = useMemo(() => {
+    if (!search.trim()) return unallocatedIds;
+    const q = search.trim().toLowerCase();
+    return unallocatedIds.filter((id) => {
+      const o = ordersMap[id];
+      return o && (o.NPno.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q));
+    });
+  }, [search, unallocatedIds, ordersMap]);
+
+  return (
+    <section className="no-print bg-white dark:bg-[#111218] border border-slate-200 dark:border-white/5 rounded-2xl p-4 space-y-3 h-full flex flex-col">
+      <div className="flex items-center gap-2">
+        <h4 className="font-display font-bold text-sm text-slate-900 dark:text-white">Belum Teralokasi</h4>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400">
+          {unallocatedIds.length} Nota
+        </span>
+      </div>
+
+      <div className="relative">
+        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cari nomor nota (NPno)"
+          className="w-full text-xs pl-8 pr-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1d26] text-slate-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+        />
+      </div>
+
+      <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 420 }}>
+        {filtered.length === 0 ? (
+          <p className="text-xs text-slate-400 italic py-4 text-center">Tidak ada nota belum teralokasi.</p>
+        ) : (
+          filtered.map((id) => {
+            const order = ordersMap[id];
+            if (!order) return null;
+            return (
+              <UnallocatedCard
+                key={id}
+                order={order}
+                vehicles={vehicles}
+                onManualAllocate={onManualAllocate}
+                onGeocode={onGeocode}
+                geocodingId={geocodingId}
+              />
+            );
+          })
+        )}
+      </div>
+    </section>
   );
 }

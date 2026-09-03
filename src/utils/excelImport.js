@@ -182,8 +182,23 @@ export function aggregateOrderLines(lines, catalog) {
       itemName: line.ItemName || (product ? product.name : line.ItemNo),
       qty,
       uom: line.UOM,
+      weightKg,
+      cubageM3,
+      missing: !product,
+      comment,
     });
   });
+
+  // Baris item yang tidak punya komentar sendiri diisi dengan gabungan
+  // semua komentar di level nota (supaya tetap kelihatan di tabel manifest).
+  Object.values(orders).forEach((order) => {
+    if (order.comments.length === 0) return;
+    const joined = order.comments.join(' / ');
+    order.lines.forEach((line) => {
+      if (!line.comment) line.comment = joined;
+    });
+  });
+
   return orders;
 }
 

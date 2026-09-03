@@ -55,6 +55,10 @@ Sebelum repo ini dipush ke GitHub sebagai **repo publik**, pertimbangkan salah s
 1. Jadikan repo **private** di GitHub (paling simpel), atau
 2. Ganti isi `fleetSeed.json` jadi data contoh/dummy, dan biarkan data asli diimport lewat menu Pengaturan saat aplikasi dipakai (tidak ikut ter-commit ke git).
 
+## Riwayat revisi tampilan
+
+Versi pertama repo ini (commit awal) direkonstruksi murni dari membaca kode JS terminifikasi — hasilnya salah tema (dipukul rata gelap, padahal aslinya terang dengan toggle opsional) dan melewatkan beberapa bagian (dashboard statistik, grid kartu armada, tabel manifest detail per-armada dengan logika LIFO "Muat ke-N"). Revisi berikutnya dibuat setelah me-render file HTML asli secara visual (screenshot) dan membandingkan langsung, sehingga jauh lebih akurat: tema terang default + toggle mode gelap, layout horizontal, dashboard 5-statistik, grid kartu armada, tabel pengecualian "Amsen" terpisah, panel "Belum Teralokasi" dengan pencarian, dan section Manifest lengkap (tabel per-armada, urutan muat LIFO, pindah armada per-baris, tanda tangan cetak).
+
 ## Known gaps / hal yang perlu dicek
 
 Karena direkonstruksi tanpa source asli, beberapa detail berikut adalah **penyederhanaan atau asumsi saya** — cek ulang kalau ada perilaku yang terasa beda dari versi sebelumnya:
