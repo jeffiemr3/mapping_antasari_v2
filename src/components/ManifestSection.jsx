@@ -64,15 +64,13 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
         <table className="w-full text-xs print:text-[9.5px] text-slate-700 dark:text-slate-300 border-collapse table-auto print:table-fixed">
           <colgroup className="hidden print:table-column-group">
             <col className="print:w-[7%]" />
-            <col className="print:w-[16%]" />
-            <col className="print:w-[38%]" />
-            <col className="print:w-[39%]" />
+            <col className="print:w-[42%]" />
+            <col className="print:w-[51%]" />
           </colgroup>
           <thead>
             <tr className="bg-slate-50 dark:bg-[#151720] print:bg-slate-200 border-b border-slate-200 dark:border-white/5 print:border-b-2 print:border-slate-800 text-left font-bold text-slate-600 dark:text-slate-200 print:text-slate-900">
               <th className="p-2 print:p-1.5 w-8 text-center print:border print:border-slate-400">Urutan</th>
-              <th className="p-2 print:p-1.5 w-24 print:border print:border-slate-400">Nota (NPno)</th>
-              <th className="p-2 print:p-1.5 print:border print:border-slate-400">Pelanggan &amp; Alamat &amp; Komen &amp; Tonase</th>
+              <th className="p-2 print:p-1.5 print:border print:border-slate-400">Nota &amp; Pelanggan &amp; Alamat &amp; Komen &amp; Tonase</th>
               <th className="p-2 print:p-1.5 print:border print:border-slate-400">Item Pengiriman</th>
               <th className="p-2 print:p-1.5 w-28 text-right no-print">Alihkan</th>
             </tr>
@@ -80,7 +78,7 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
           <tbody className="divide-y divide-slate-100 dark:divide-white/5 print:divide-y-0">
             {assignedIds.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-slate-400 italic">
+                <td colSpan={4} className="p-6 text-center text-slate-400 italic">
                   Belum ada pengiriman dialokasikan ke armada ini.
                 </td>
               </tr>
@@ -103,16 +101,16 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
                       </span>
                       <div className="hidden print:block text-[7px] text-slate-500 mt-1 leading-none">&#9744; selesai</div>
                     </td>
-                    <td className="p-2 print:p-1.5 print:border print:border-slate-300 print:align-top">
-                      <div className="font-mono text-[11px] print:text-[9.5px] font-bold text-slate-900 dark:text-white">
-                        {order.NPno}
-                      </div>
-                      <div className="text-[9.5px] print:text-[8.5px] text-slate-400 print:text-slate-600 mt-0.5 print:mt-1">
-                        Muat ke-<strong>{loadOrder}</strong>
-                      </div>
-                    </td>
                     <td className="p-2 print:p-1.5 max-w-sm print:border print:border-slate-300 print:align-top">
-                      <div className="font-bold text-[11px] print:text-[10px] text-slate-900 dark:text-white">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="font-mono text-[10.5px] print:text-[9px] font-bold text-slate-900 dark:text-white">
+                          {order.NPno}
+                        </span>
+                        <span className="text-[9px] print:text-[8px] text-slate-400 print:text-slate-500">
+                          Muat ke-<strong>{loadOrder}</strong>
+                        </span>
+                      </div>
+                      <div className="font-bold text-[11px] print:text-[10px] text-slate-900 dark:text-white mt-1 print:mt-1.5">
                         {order.customer}
                       </div>
                       <p className="text-slate-500 dark:text-slate-400 print:text-slate-700 text-[10px] print:text-[8.5px] leading-tight mt-0.5 print:mt-1">
