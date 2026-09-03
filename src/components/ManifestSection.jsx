@@ -16,17 +16,18 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
       }`}
     >
       {/* Header khusus cetak (tersembunyi di layar) */}
-      <div className="hidden print:block border-b border-slate-900 pb-1 mb-0.5">
+      <div className="hidden print:block border-2 border-slate-800 rounded-none p-2 mb-1.5">
         <div className="flex justify-between items-end">
           <div>
-            <h2 className="text-xs font-bold tracking-tight text-slate-900">MITRA10 ANTASARI &bull; MANIFEST JALAN SUPIR</h2>
-            <p className="text-[9.5px] text-slate-600 mt-0.5">
+            <h2 className="text-sm font-extrabold tracking-tight text-slate-900">MITRA10 ANTASARI &bull; MANIFEST JALAN SUPIR</h2>
+            <p className="text-[10px] text-slate-700 mt-1">
               Kendaraan: <strong>{vehicle.vehicle}</strong> &bull; No. Polisi: <strong>{vehicle.plate}</strong> &bull; Supir:{' '}
               <strong>{vehicle.driver}</strong>
             </p>
           </div>
-          <div className="text-right text-[9px] text-slate-500 font-mono">
-            {selectedDate} &bull; {assignedIds.length} stops
+          <div className="text-right">
+            <p className="text-[10px] text-slate-600 font-mono">{selectedDate}</p>
+            <p className="text-sm font-extrabold text-slate-900">{assignedIds.length} STOP</p>
           </div>
         </div>
       </div>
@@ -59,18 +60,24 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-white/5 print:border-slate-300 print:rounded-none">
-        <table className="w-full text-xs print:text-[9px] text-slate-700 dark:text-slate-300 border-collapse">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-white/5 print:border-0 print:rounded-none print:overflow-visible">
+        <table className="w-full text-xs print:text-[9.5px] text-slate-700 dark:text-slate-300 border-collapse table-auto print:table-fixed">
+          <colgroup className="hidden print:table-column-group">
+            <col className="print:w-[7%]" />
+            <col className="print:w-[16%]" />
+            <col className="print:w-[38%]" />
+            <col className="print:w-[39%]" />
+          </colgroup>
           <thead>
-            <tr className="bg-slate-50 dark:bg-[#151720] print:bg-slate-100 border-b border-slate-200 dark:border-white/5 text-left font-bold text-slate-600 dark:text-slate-200">
-              <th className="p-2 print:p-1 w-8 text-center">Urutan</th>
-              <th className="p-2 print:p-1 w-24">Nota (NPno)</th>
-              <th className="p-2 print:p-1">Pelanggan &amp; Alamat &amp; Komen &amp; Tonase</th>
-              <th className="p-2 print:p-1">Item Pengiriman</th>
-              <th className="p-2 print:p-1 w-28 text-right no-print">Alihkan</th>
+            <tr className="bg-slate-50 dark:bg-[#151720] print:bg-slate-200 border-b border-slate-200 dark:border-white/5 print:border-b-2 print:border-slate-800 text-left font-bold text-slate-600 dark:text-slate-200 print:text-slate-900">
+              <th className="p-2 print:p-1.5 w-8 text-center print:border print:border-slate-400">Urutan</th>
+              <th className="p-2 print:p-1.5 w-24 print:border print:border-slate-400">Nota (NPno)</th>
+              <th className="p-2 print:p-1.5 print:border print:border-slate-400">Pelanggan &amp; Alamat &amp; Komen &amp; Tonase</th>
+              <th className="p-2 print:p-1.5 print:border print:border-slate-400">Item Pengiriman</th>
+              <th className="p-2 print:p-1.5 w-28 text-right no-print">Alihkan</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-white/5 print:divide-slate-200">
+          <tbody className="divide-y divide-slate-100 dark:divide-white/5 print:divide-y-0">
             {assignedIds.length === 0 ? (
               <tr>
                 <td colSpan={5} className="p-6 text-center text-slate-400 italic">
@@ -83,68 +90,81 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
                 if (!order) return null;
                 const loadOrder = assignedIds.length - idx; // LIFO: dimuat kebalikan urutan antar
                 return (
-                  <tr key={id} className="hover:bg-slate-50 dark:hover:bg-[#151720]/40 align-top">
-                    <td className="p-2 print:p-1 text-center">
+                  <tr
+                    key={id}
+                    className="hover:bg-slate-50 dark:hover:bg-[#151720]/40 align-top print:break-inside-avoid print:even:bg-slate-50"
+                  >
+                    <td className="p-2 print:p-1.5 text-center print:border print:border-slate-300 print:align-top">
                       <span
-                        className="w-5 h-5 print:w-4 print:h-4 rounded-full text-white font-mono font-bold text-[10px] print:text-[8px] flex items-center justify-center mx-auto"
+                        className="w-5 h-5 print:w-6 print:h-6 rounded-full text-white print:text-slate-900 print:bg-white font-mono font-bold text-[10px] print:text-[11px] flex items-center justify-center mx-auto print:border-2 print:border-slate-800"
                         style={{ backgroundColor: color }}
                       >
                         {idx + 1}
                       </span>
+                      <div className="hidden print:block text-[7px] text-slate-500 mt-1 leading-none">&#9744; selesai</div>
                     </td>
-                    <td className="p-2 print:p-1">
-                      <div className="font-mono text-[11px] print:text-[8.5px] font-bold text-slate-900 dark:text-white">
+                    <td className="p-2 print:p-1.5 print:border print:border-slate-300 print:align-top">
+                      <div className="font-mono text-[11px] print:text-[9.5px] font-bold text-slate-900 dark:text-white">
                         {order.NPno}
                       </div>
-                      <div className="text-[9.5px] print:text-[8px] text-slate-400 mt-0.5 print:mt-0">
+                      <div className="text-[9.5px] print:text-[8.5px] text-slate-400 print:text-slate-600 mt-0.5 print:mt-1">
                         Muat ke-<strong>{loadOrder}</strong>
                       </div>
                     </td>
-                    <td className="p-2 print:p-1 max-w-sm">
-                      <div className="font-bold text-[11px] print:text-[8.5px] text-slate-900 dark:text-white">
+                    <td className="p-2 print:p-1.5 max-w-sm print:border print:border-slate-300 print:align-top">
+                      <div className="font-bold text-[11px] print:text-[10px] text-slate-900 dark:text-white">
                         {order.customer}
                       </div>
-                      <p className="text-slate-500 dark:text-slate-400 text-[10px] print:text-[8px] leading-tight mt-0.5 print:mt-0">
+                      <p className="text-slate-500 dark:text-slate-400 print:text-slate-700 text-[10px] print:text-[8.5px] leading-tight mt-0.5 print:mt-1">
                         {order.address} {order.address2 ? `(${order.address2})` : ''}
                       </p>
                       {order.phone && (
-                        <span className="font-mono text-[9.5px] print:text-[8px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5 print:mt-0">
-                          📞 {order.phone}
+                        <span className="font-mono text-[9.5px] print:text-[8.5px] text-emerald-600 dark:text-emerald-400 print:text-slate-800 font-semibold block mt-0.5 print:mt-1">
+                          &#9742; {order.phone}
                         </span>
                       )}
                       {order.comments.length > 0 && (
-                        <span className="inline-block mt-0.5 print:mt-0 px-1 py-0.5 bg-amber-100 dark:bg-amber-500/15 print:bg-transparent print:px-0 print:py-0 text-amber-700 dark:text-amber-400 text-[9px] print:text-[8px] rounded font-medium print:font-semibold border border-amber-200 dark:border-amber-500/20 print:border-0">
-                          💬 {order.comments.join(' / ')}
+                        <span className="inline-block mt-0.5 print:mt-1 px-1 py-0.5 bg-amber-100 dark:bg-amber-500/15 print:bg-transparent print:px-0 print:py-0 text-amber-700 dark:text-amber-400 print:text-slate-900 text-[9px] print:text-[8.5px] rounded font-medium print:font-bold border border-amber-200 dark:border-amber-500/20 print:border-0">
+                          &#128172; {order.comments.join(' / ')}
                         </span>
                       )}
                       <div className="text-[9.5px] print:hidden font-mono font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
                         &#9878; {order.totalWeightKg.toFixed(1)} kg &middot; {order.totalCubageM3.toFixed(3)} m&sup3;
                       </div>
+                      <div className="hidden print:block mt-2 pt-1 border-t border-dotted border-slate-400">
+                        <span className="text-[7.5px] text-slate-500">Catatan: </span>
+                        <span className="inline-block align-bottom border-b border-slate-400" style={{ width: '75%' }}>
+                          &nbsp;
+                        </span>
+                      </div>
                     </td>
-                    <td className="p-2 print:p-1 space-y-0.5 print:space-y-0">
-                      {order.lines.map((line, li) => (
-                        <div key={li} className="flex items-center gap-1 text-[10px] print:text-[8px] leading-tight border-b border-slate-100 dark:border-white/5 print:border-slate-100 pb-0.5 print:pb-0">
-                          <span className="text-slate-600 dark:text-slate-300 flex items-center gap-1 flex-wrap">
-                            {line.itemName} &times; <strong className="text-slate-900 dark:text-white">{line.qty}</strong> {line.uom}
-                            {line.weightSource === 'sizeEstimate' && (
-                              <span
-                                className="print:hidden text-[8px] px-1 py-0.5 bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-500/20 shrink-0"
-                                title="Berat ditaksir dari Master Tambahan (ukuran), bukan dari Master Item"
-                              >
-                                &#8776; estimasi
-                              </span>
-                            )}
-                            {line.missing && (
-                              <span
-                                className="print:hidden text-[8px] px-1 py-0.5 bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 rounded border border-rose-200 dark:border-rose-500/20 shrink-0"
-                                title="Kode barang tidak ditemukan di Master Item maupun Master Tambahan"
-                              >
-                                &#9888; berat n/a
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      ))}
+                    <td className="p-2 print:p-1.5 print:border print:border-slate-300 print:align-top">
+                      <div className="space-y-0.5 print:space-y-1">
+                        {order.lines.map((line, li) => (
+                          <div key={li} className="flex items-center gap-1 text-[10px] print:text-[8.5px] leading-tight border-b border-slate-100 dark:border-white/5 print:border-b-0 pb-0.5 print:pb-0">
+                            <span className="text-slate-600 dark:text-slate-300 print:text-slate-800 flex items-center gap-1 flex-wrap">
+                              <span className="hidden print:inline text-slate-400">&bull;</span>
+                              {line.itemName} &times; <strong className="text-slate-900 dark:text-white">{line.qty}</strong> {line.uom}
+                              {line.weightSource === 'sizeEstimate' && (
+                                <span
+                                  className="print:hidden text-[8px] px-1 py-0.5 bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-500/20 shrink-0"
+                                  title="Berat ditaksir dari Master Tambahan (ukuran), bukan dari Master Item"
+                                >
+                                  &#8776; estimasi
+                                </span>
+                              )}
+                              {line.missing && (
+                                <span
+                                  className="print:hidden text-[8px] px-1 py-0.5 bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 rounded border border-rose-200 dark:border-rose-500/20 shrink-0"
+                                  title="Kode barang tidak ditemukan di Master Item maupun Master Tambahan"
+                                >
+                                  &#9888; berat n/a
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </td>
                     <td className="p-2 text-right no-print">
                       <select
