@@ -1,0 +1,62 @@
+[
+  {
+    "driver": "KHOIRI",
+    "vehicle": "NKEL RIT 1",
+    "plate": "BE 8974 AMF",
+    "capWeightKg": 3500,
+    "capCubageM3": 8.959,
+    "heightCm": 170,
+    "widthCm": 170,
+    "lengthCm": 310
+  },
+  {
+    "driver": "KHOIRI",
+    "vehicle": "NKEL RIT 2",
+    "plate": "BE 8974 AMF",
+    "capWeightKg": 3500,
+    "capCubageM3": 8.959,
+    "heightCm": 170,
+    "widthCm": 170,
+    "lengthCm": 310
+  },
+  {
+    "driver": "HAPIPI",
+    "vehicle": "L300 RIT 1",
+    "plate": "BE 8970 AMF",
+    "capWeightKg": 2500,
+    "capCubageM3": 1.2028,
+    "heightCm": 31,
+    "widthCm": 160,
+    "lengthCm": 242
+  },
+  {
+    "driver": "HAPIPI",
+    "vehicle": "L300 RIT 2",
+    "plate": "BE 8970 AMF",
+    "capWeightKg": 2500,
+    "capCubageM3": 1.2028,
+    "heightCm": 31,
+    "widthCm": 160,
+    "lengthCm": 242
+  },
+  {
+    "driver": "FEBRI",
+    "vehicle": "L300 RIT 1",
+    "plate": "BE 8387 UP",
+    "capWeightKg": 2500,
+    "capCubageM3": 1.2028,
+    "heightCm": 31,
+    "widthCm": 160,
+    "lengthCm": 242
+  },
+  {
+    "driver": "FEBRI",
+    "vehicle": "L300 RIT 2",
+    "plate": "BE 8387UP",
+    "capWeightKg": 2500,
+    "capCubageM3": 1.2028,
+    "heightCm": 31,
+    "widthCm": 160,
+    "lengthCm": 242
+  }
+]

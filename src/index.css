@@ -1,0 +1,58 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+@theme {
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-sans: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background-color: #0b0c10;
+    color: #e5e7eb;
+    font-family: var(--font-sans);
+  }
+  .font-display {
+    font-family: var(--font-display);
+  }
+}
+
+/* Scrollbar tipis, senada dengan tema gelap */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #111218;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2c38;
+  border-radius: 999px;
+}
+
+/* Ikon marker Leaflet custom (divIcon) tidak butuh bingkai default */
+.leaflet-div-icon {
+  background: transparent;
+  border: none;
+}
+
+/* ============================================================= */
+/* Mode cetak: "Cetak Semua Rute (Ramping & Hemat Kertas)"        */
+/* ============================================================= */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .print-route {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
