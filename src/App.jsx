@@ -13,6 +13,7 @@ import MapView from './components/MapView';
 import ManifestSection from './components/ManifestSection';
 import SettingsModal from './components/SettingsModal';
 import SizeWeightModal from './components/SizeWeightModal';
+import SplitNotaModal from './components/SplitNotaModal';
 import Footer from './components/Footer';
 
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -20,6 +21,8 @@ import { useOrders } from './hooks/useOrders';
 import { useTheme } from './hooks/useTheme';
 import { STORAGE_KEYS } from './utils/storage';
 import { autoAllocate, fleetRowKey } from './utils/allocation';
+import { findOversizedSingleOrders } from './utils/allocation';
+import { splitOrderInRawLines } from './utils/splitNota';
 import { getOrPromptApiKey, geocodeAddress } from './utils/geocode';
 import { DEFAULT_WAREHOUSE } from './data/constants';
 import { toDDMMYYYY } from './utils/format';
@@ -50,6 +53,7 @@ export default function App() {
   const [focusedVehicleIdx, setFocusedVehicleIdx] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sizeWeightOpen, setSizeWeightOpen] = useState(false);
+  const [splitNotaId, setSplitNotaId] = useState(null);
   const [geocodingId, setGeocodingId] = useState(null);
   const [geocodeError, setGeocodeError] = useState(null);
 
@@ -79,6 +83,12 @@ export default function App() {
   const unallocatedIdsToShow = useMemo(
     () => dispatch.unallocated.filter((id) => !allAssignedIds.has(id) && ordersMap[id]),
     [dispatch.unallocated, allAssignedIds, ordersMap]
+  );
+
+  const oversizedIds = useMemo(
+    () => findOversizedSingleOrders(unallocatedIdsToShow, ordersMap, getActiveFleetRows(), maxLoadPercent),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [unallocatedIdsToShow, ordersMap, fleetRows, activeFleetKeys, maxLoadPercent]
   );
 
   const totalWeightForDate = useMemo(
@@ -143,6 +153,19 @@ export default function App() {
       assignments: d.assignments.map((arr, i) => (i === fromIdx ? arr.filter((id) => id !== orderId) : arr)),
       unallocated: d.unallocated.includes(orderId) ? d.unallocated : [...d.unallocated, orderId],
     }));
+  }
+
+  function handleSplitOrder(quantities) {
+    const npno = splitNotaId;
+    if (!npno) return;
+    setRawLines((lines) => splitOrderInRawLines(lines, npno, quantities));
+    setDispatch((d) => {
+      const withoutOld = d.unallocated.filter((id) => id !== npno);
+      const numParts = quantities[0]?.length || 0;
+      const newIds = Array.from({ length: numParts }, (_, i) => `${npno}-${String.fromCharCode(65 + i)}`);
+      return { ...d, unallocated: [...withoutOld, ...newIds] };
+    });
+    setSplitNotaId(null);
   }
 
   async function handleGeocode(orderId) {
@@ -274,6 +297,8 @@ export default function App() {
               onManualAllocate={handleManualAllocate}
               onGeocode={handleGeocode}
               geocodingId={geocodingId}
+              oversizedIds={oversizedIds}
+              onSplitNota={setSplitNotaId}
             />
           </div>
         </div>
@@ -294,6 +319,9 @@ export default function App() {
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} fleetRows={fleetRows} onFleetChange={setFleetRows} />}
       {sizeWeightOpen && (
         <SizeWeightModal onClose={() => setSizeWeightOpen(false)} rows={sizeWeightRows} onRowsChange={setSizeWeightRows} />
+      )}
+      {splitNotaId && ordersMap[splitNotaId] && (
+        <SplitNotaModal order={ordersMap[splitNotaId]} onClose={() => setSplitNotaId(null)} onConfirm={handleSplitOrder} />
       )}
     </div>
   );

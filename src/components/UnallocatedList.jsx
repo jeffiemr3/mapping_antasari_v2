@@ -1,10 +1,22 @@
 import { useMemo, useState } from 'react';
-import { Search, MapPin, Phone, Sparkles } from 'lucide-react';
+import { Search, MapPin, Phone, Sparkles, Scissors, AlertOctagon } from 'lucide-react';
 
-function UnallocatedCard({ order, vehicles, onManualAllocate, onGeocode, geocodingId }) {
+function UnallocatedCard({ order, vehicles, onManualAllocate, onGeocode, geocodingId, isOversized, onSplitNota }) {
   const missingCoords = !order.lat || !order.lng;
   return (
-    <div className="bg-slate-50 dark:bg-[#151720] border border-slate-200 dark:border-white/5 rounded-xl p-3 space-y-1.5">
+    <div
+      className={`border rounded-xl p-3 space-y-1.5 ${
+        isOversized
+          ? 'bg-rose-50 dark:bg-rose-950/15 border-rose-200 dark:border-rose-500/20'
+          : 'bg-slate-50 dark:bg-[#151720] border-slate-200 dark:border-white/5'
+      }`}
+    >
+      {isOversized && (
+        <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+          <AlertOctagon className="w-3.5 h-3.5" />
+          Melebihi kapasitas mobil manapun - perlu dipecah
+        </p>
+      )}
       <p className="font-mono text-[10px] text-slate-400">{order.NPno}</p>
       <p className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
         {order.customer}
@@ -61,11 +73,31 @@ function UnallocatedCard({ order, vehicles, onManualAllocate, onGeocode, geocodi
           </option>
         ))}
       </select>
+      <button
+        onClick={() => onSplitNota(order.NPno)}
+        className={`w-full text-xs font-semibold py-1.5 rounded-lg cursor-pointer flex items-center justify-center gap-1.5 ${
+          isOversized
+            ? 'bg-rose-600 hover:bg-rose-700 text-white'
+            : 'bg-slate-100 dark:bg-[#1c1d26] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#222431]'
+        }`}
+      >
+        <Scissors className="w-3.5 h-3.5" />
+        Pecah Nota
+      </button>
     </div>
   );
 }
 
-export default function UnallocatedList({ unallocatedIds, ordersMap, vehicles, onManualAllocate, onGeocode, geocodingId }) {
+export default function UnallocatedList({
+  unallocatedIds,
+  ordersMap,
+  vehicles,
+  onManualAllocate,
+  onGeocode,
+  geocodingId,
+  oversizedIds = [],
+  onSplitNota,
+}) {
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -76,6 +108,12 @@ export default function UnallocatedList({ unallocatedIds, ordersMap, vehicles, o
       return o && (o.NPno.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q));
     });
   }, [search, unallocatedIds, ordersMap]);
+
+  // Tampilkan yang oversized duluan biar langsung kelihatan perlu ditindak
+  const sorted = useMemo(() => {
+    const oversizedSet = new Set(oversizedIds);
+    return [...filtered].sort((a, b) => (oversizedSet.has(b) ? 1 : 0) - (oversizedSet.has(a) ? 1 : 0));
+  }, [filtered, oversizedIds]);
 
   return (
     <section className="no-print bg-white dark:bg-[#111218] border border-slate-200 dark:border-white/5 rounded-2xl p-4 space-y-3 h-full flex flex-col">
@@ -98,10 +136,10 @@ export default function UnallocatedList({ unallocatedIds, ordersMap, vehicles, o
       </div>
 
       <div className="space-y-2 overflow-y-auto" style={{ maxHeight: 420 }}>
-        {filtered.length === 0 ? (
+        {sorted.length === 0 ? (
           <p className="text-xs text-slate-400 italic py-4 text-center">Tidak ada nota belum teralokasi.</p>
         ) : (
-          filtered.map((id) => {
+          sorted.map((id) => {
             const order = ordersMap[id];
             if (!order) return null;
             return (
@@ -112,6 +150,8 @@ export default function UnallocatedList({ unallocatedIds, ordersMap, vehicles, o
                 onManualAllocate={onManualAllocate}
                 onGeocode={onGeocode}
                 geocodingId={geocodingId}
+                isOversized={oversizedIds.includes(id)}
+                onSplitNota={onSplitNota}
               />
             );
           })

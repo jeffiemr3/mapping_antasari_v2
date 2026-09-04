@@ -169,6 +169,22 @@ const MAX_RITS_PER_VEHICLE = 8; // batas keras jumlah rit (trip) per driver+plat
 const MAX_ITERATIONS = 20000; // pengaman anti infinite-loop
 
 /**
+ * Cari NPno yang beratnya/volumenya SENDIRIAN sudah melebihi kapasitas
+ * armada terbesar yang aktif - kasus ini tidak bisa dibagi otomatis
+ * (satu nota adalah satu unit data) dan perlu dipecah manual lewat
+ * fitur "Pecah Nota" di UI.
+ */
+export function findOversizedSingleOrders(orderIds, ordersMap, activeFleet, maxLoadPercent) {
+  const loadFactor = maxLoadPercent / 100;
+  const maxCapWeight = Math.max(0, ...activeFleet.map((v) => v.capWeightKg * loadFactor));
+  const maxCapCubage = Math.max(0, ...activeFleet.map((v) => v.capCubageM3 * loadFactor));
+  return orderIds.filter((id) => {
+    const o = ordersMap[id];
+    return o && (o.totalWeightKg > maxCapWeight + 1e-9 || o.totalCubageM3 > maxCapCubage + 1e-9);
+  });
+}
+
+/**
  * Alokasikan cluster stop ke armada aktif dengan greedy nearest-neighbor,
  * membuat rit tambahan otomatis kalau perlu (maks MAX_RITS_PER_VEHICLE).
  *
@@ -181,7 +197,42 @@ const MAX_ITERATIONS = 20000; // pengaman anti infinite-loop
  */
 export function autoAllocate(orderIds, ordersMap, activeFleet, startPoint, maxLoadPercent) {
   const loadFactor = maxLoadPercent / 100;
-  const clusters = clusterOrders(orderIds, ordersMap);
+  let clusters = clusterOrders(orderIds, ordersMap);
+
+  // ---------------------------------------------------------------------
+  // Pecah otomatis cluster (gabungan nota 1 pelanggan) yang total berat/
+  // volumenya melebihi kapasitas armada TERBESAR yang tersedia - kalau
+  // dipaksa utuh, cluster ini tidak akan pernah muat di mobil manapun dan
+  // macet permanen di "Belum Teralokasi". Dipecah jadi per-NOTA (satu nota
+  // = satu unit), supaya nota-nota itu bisa dibagi ke beberapa mobil
+  // berbeda oleh algoritma bin-packing di bawah. Kalau SATU nota sendirian
+  // masih melebihi kapasitas mobil manapun, dia tetap tidak akan muat -
+  // itu kasus yang perlu dipecah manual lewat fitur "Pecah Nota".
+  // ---------------------------------------------------------------------
+  const maxCapWeight = Math.max(0, ...activeFleet.map((v) => v.capWeightKg * loadFactor));
+  const maxCapCubage = Math.max(0, ...activeFleet.map((v) => v.capCubageM3 * loadFactor));
+  clusters = clusters.flatMap((cluster) => {
+    const overCapacity =
+      cluster.totalWeightKg > maxCapWeight + 1e-9 || cluster.totalCubageM3 > maxCapCubage + 1e-9;
+    if (!overCapacity || cluster.members.length <= 1) return [cluster];
+
+    // Pecah jadi satu "cluster" per nota (masing-masing tetap utuh, tidak
+    // dipotong isinya) supaya bisa dibagi ke mobil yang berbeda-beda.
+    return cluster.members.map((id) => {
+      const order = ordersMap[id];
+      const hasCoords = order.lat && order.lng && order.lat !== 0 && order.lng !== 0;
+      return {
+        members: [id],
+        validMembers: hasCoords ? [id] : [],
+        zeroMembers: hasCoords ? [] : [id],
+        lat: hasCoords ? order.lat : null,
+        lng: hasCoords ? order.lng : null,
+        totalWeightKg: order.totalWeightKg,
+        totalCubageM3: order.totalCubageM3,
+      };
+    });
+  });
+
   const withCoords = clusters.filter((c) => c.lat !== null);
   const withoutCoords = clusters.filter((c) => c.lat === null);
 
