@@ -1,7 +1,7 @@
 import { Printer, Route } from 'lucide-react';
 import { ROUTE_COLORS } from '../data/constants';
 
-function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVehicles, selectedDate, onMoveStop, isFocused, pageBreakBefore }) {
+function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVehicles, selectedDate, onMoveStop, onRemoveStop, isFocused, pageBreakBefore }) {
   const totalWeight = assignedIds.reduce((sum, id) => sum + (ordersMap[id]?.totalWeightKg || 0), 0);
   const totalCubage = assignedIds.reduce((sum, id) => sum + (ordersMap[id]?.totalCubageM3 || 0), 0);
   const color = ROUTE_COLORS[vehicleIndex % ROUTE_COLORS.length];
@@ -172,7 +172,11 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
                     <td className="p-2 text-right no-print">
                       <select
                         value={vehicleIndex}
-                        onChange={(e) => onMoveStop(id, vehicleIndex, parseInt(e.target.value, 10))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (value === 'REMOVE') onRemoveStop(id, vehicleIndex);
+                          else onMoveStop(id, vehicleIndex, parseInt(value, 10));
+                        }}
                         className="text-xs border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1d26] text-slate-700 dark:text-white py-1 px-1.5 rounded-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-500"
                       >
                         {allVehicles.map((v, vi) => (
@@ -180,6 +184,9 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
                             🚚 {v.vehicle}
                           </option>
                         ))}
+                        <option value="REMOVE" className="text-rose-600">
+                          🗑️ Keluarkan (Reschedule)
+                        </option>
                       </select>
                     </td>
                   </tr>
@@ -211,7 +218,7 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
   );
 }
 
-export default function ManifestSection({ drivers, assignments, ordersMap, selectedDate, onMoveStop, focusedVehicleIdx }) {
+export default function ManifestSection({ drivers, assignments, ordersMap, selectedDate, onMoveStop, onRemoveStop, focusedVehicleIdx }) {
   const totalAssigned = assignments.reduce((sum, arr) => sum + arr.length, 0);
 
   return (
@@ -252,6 +259,7 @@ export default function ManifestSection({ drivers, assignments, ordersMap, selec
             allVehicles={drivers}
             selectedDate={selectedDate}
             onMoveStop={onMoveStop}
+            onRemoveStop={onRemoveStop}
             isFocused={focusedVehicleIdx === idx}
             pageBreakBefore={!isFirstVisible}
           />

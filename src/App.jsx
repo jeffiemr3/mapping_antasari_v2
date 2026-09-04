@@ -136,6 +136,15 @@ export default function App() {
     }));
   }
 
+  /** Keluarkan nota dari rute armada -> kembali ke "Belum Teralokasi" (mis. pelanggan minta reschedule). */
+  function handleRemoveStop(orderId, fromIdx) {
+    setDispatch((d) => ({
+      ...d,
+      assignments: d.assignments.map((arr, i) => (i === fromIdx ? arr.filter((id) => id !== orderId) : arr)),
+      unallocated: d.unallocated.includes(orderId) ? d.unallocated : [...d.unallocated, orderId],
+    }));
+  }
+
   async function handleGeocode(orderId) {
     const order = ordersMap[orderId];
     if (!order) return;
@@ -275,6 +284,7 @@ export default function App() {
           ordersMap={ordersMap}
           selectedDate={selectedDate}
           onMoveStop={handleMoveStop}
+          onRemoveStop={handleRemoveStop}
           focusedVehicleIdx={focusedVehicleIdx}
         />
       </main>
