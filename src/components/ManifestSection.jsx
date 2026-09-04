@@ -1,10 +1,167 @@
 import { Printer, Route } from 'lucide-react';
 import { ROUTE_COLORS } from '../data/constants';
+import { clusterOrders } from '../utils/allocation';
+
+function StopRow({ stop, stopIdx, totalStops, ordersMap, color, vehicleIndex, allVehicles, onMoveStop, onRemoveStop }) {
+  const members = stop.members;
+  const primary = ordersMap[members[0]];
+  if (!primary) return null;
+  const loadOrder = totalStops - stopIdx; // LIFO: dimuat kebalikan urutan antar stop
+  const isMultiNota = members.length > 1;
+
+  const mergedComments = [];
+  members.forEach((id) => {
+    (ordersMap[id]?.comments || []).forEach((c) => {
+      if (!mergedComments.includes(c)) mergedComments.push(c);
+    });
+  });
+  const anyPriority = members.some((id) => ordersMap[id]?.priorityRit1);
+  const stopWeight = members.reduce((sum, id) => sum + (ordersMap[id]?.totalWeightKg || 0), 0);
+  const stopCubage = members.reduce((sum, id) => sum + (ordersMap[id]?.totalCubageM3 || 0), 0);
+
+  function handleSelectChange(e) {
+    const value = e.target.value;
+    members.forEach((id) => {
+      if (value === 'REMOVE') onRemoveStop(id, vehicleIndex);
+      else onMoveStop(id, vehicleIndex, parseInt(value, 10));
+    });
+  }
+
+  return (
+    <tr className="hover:bg-slate-50 dark:hover:bg-[#151720]/40 align-top print:break-inside-avoid print:even:bg-slate-50">
+      <td className="p-2 print:p-1.5 text-center print:border print:border-slate-300 print:align-top">
+        <span
+          className="w-5 h-5 print:w-6 print:h-6 rounded-full text-white print:text-slate-900 print:bg-white font-mono font-bold text-[10px] print:text-[11px] flex items-center justify-center mx-auto print:border-2 print:border-slate-800"
+          style={{ backgroundColor: color }}
+        >
+          {stopIdx + 1}
+        </span>
+        <div className="hidden print:block text-[7px] text-slate-500 mt-1 leading-none">&#9744; selesai</div>
+      </td>
+      <td className="p-2 print:p-1.5 max-w-sm print:border print:border-slate-300 print:align-top">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          {isMultiNota ? (
+            <span className="flex flex-col gap-0.5">
+              {members.map((id) => (
+                <span key={id} className="font-mono text-[10.5px] print:text-[9px] font-bold text-slate-900 dark:text-white">
+                  {id}
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span className="font-mono text-[10.5px] print:text-[9px] font-bold text-slate-900 dark:text-white">
+              {members[0]}
+            </span>
+          )}
+          <span className="text-[9px] print:text-[8px] text-slate-400 print:text-slate-500">
+            Muat ke-<strong>{loadOrder}</strong>
+          </span>
+          {isMultiNota && (
+            <span className="text-[8.5px] print:text-[8px] px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-500/15 print:bg-transparent text-indigo-700 dark:text-indigo-400 print:text-indigo-700 rounded font-bold border border-indigo-200 dark:border-indigo-500/20 print:border print:border-indigo-700 shrink-0">
+              &#128230; {members.length} NOTA - 1 DROP
+            </span>
+          )}
+          {anyPriority && (
+            <span className="text-[8.5px] print:text-[8px] px-1.5 py-0.5 bg-red-100 dark:bg-red-500/15 print:bg-transparent text-red-700 dark:text-red-400 print:text-red-700 rounded font-bold border border-red-200 dark:border-red-500/20 print:border print:border-red-700 shrink-0">
+            &#9200; PRIORITAS RIT 1
+          </span>
+          )}
+        </div>
+        <div className="font-bold text-[11px] print:text-[10px] text-slate-900 dark:text-white mt-1 print:mt-1.5">
+          {primary.customer}
+        </div>
+        <p className="text-slate-500 dark:text-slate-400 print:text-slate-700 text-[10px] print:text-[8.5px] leading-tight mt-0.5 print:mt-1">
+          {primary.address} {primary.address2 ? `(${primary.address2})` : ''}
+        </p>
+        {primary.phone && (
+          <span className="font-mono text-[9.5px] print:text-[8.5px] text-emerald-600 dark:text-emerald-400 print:text-slate-800 font-semibold block mt-0.5 print:mt-1">
+            &#9742; {primary.phone}
+          </span>
+        )}
+        {mergedComments.length > 0 && (
+          <span className="inline-block mt-0.5 print:mt-1 px-1 py-0.5 bg-amber-100 dark:bg-amber-500/15 print:bg-transparent print:px-0 print:py-0 text-amber-700 dark:text-amber-400 print:text-slate-900 text-[9px] print:text-[8.5px] rounded font-medium print:font-bold border border-amber-200 dark:border-amber-500/20 print:border-0">
+            &#128172; {mergedComments.join(' / ')}
+          </span>
+        )}
+        <div className="text-[9.5px] print:hidden font-mono font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
+          &#9878; {stopWeight.toFixed(1)} kg &middot; {stopCubage.toFixed(3)} m&sup3;
+        </div>
+        <div className="hidden print:block mt-2 pt-1 border-t border-dotted border-slate-400">
+          <span className="text-[7.5px] text-slate-500">Catatan: </span>
+          <span className="inline-block align-bottom border-b border-slate-400" style={{ width: '75%' }}>
+            &nbsp;
+          </span>
+        </div>
+      </td>
+      <td className="p-2 print:p-1.5 print:border print:border-slate-300 print:align-top">
+        <div className="space-y-1.5 print:space-y-1.5">
+          {members.map((id) => {
+            const order = ordersMap[id];
+            if (!order) return null;
+            return (
+              <div key={id} className={isMultiNota ? 'pb-1 print:pb-1 border-b border-dashed border-slate-200 dark:border-white/10 print:border-slate-300 last:border-0' : ''}>
+                {isMultiNota && (
+                  <p className="text-[8.5px] print:text-[7.5px] font-mono text-slate-400 print:text-slate-500 mb-0.5">{id}:</p>
+                )}
+                <div className="space-y-0.5 print:space-y-1">
+                  {order.lines.map((line, li) => (
+                    <div key={li} className="flex items-center gap-1 text-[10px] print:text-[8.5px] leading-tight border-b border-slate-100 dark:border-white/5 print:border-b-0 pb-0.5 print:pb-0">
+                      <span className="text-slate-600 dark:text-slate-300 print:text-slate-800 flex items-center gap-1 flex-wrap">
+                        <span className="hidden print:inline text-slate-400">&bull;</span>
+                        {line.itemName} &times; <strong className="text-slate-900 dark:text-white">{line.qty}</strong> {line.uom}
+                        {line.weightSource === 'sizeEstimate' && (
+                          <span
+                            className="print:hidden text-[8px] px-1 py-0.5 bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-500/20 shrink-0"
+                            title="Berat ditaksir dari Master Tambahan (ukuran), bukan dari Master Item"
+                          >
+                            &#8776; estimasi
+                          </span>
+                        )}
+                        {line.missing && (
+                          <span
+                            className="print:hidden text-[8px] px-1 py-0.5 bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 rounded border border-rose-200 dark:border-rose-500/20 shrink-0"
+                            title="Kode barang tidak ditemukan di Master Item maupun Master Tambahan"
+                          >
+                            &#9888; berat n/a
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </td>
+      <td className="p-2 text-right no-print">
+        <select
+          value={vehicleIndex}
+          onChange={handleSelectChange}
+          className="text-xs border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1d26] text-slate-700 dark:text-white py-1 px-1.5 rounded-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-500"
+        >
+          {allVehicles.map((v, vi) => (
+            <option key={vi} value={vi}>
+              🚚 {v.vehicle}
+            </option>
+          ))}
+          <option value="REMOVE" className="text-rose-600">
+            🗑️ Keluarkan (Reschedule)
+          </option>
+        </select>
+      </td>
+    </tr>
+  );
+}
 
 function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVehicles, selectedDate, onMoveStop, onRemoveStop, isFocused, pageBreakBefore }) {
   const totalWeight = assignedIds.reduce((sum, id) => sum + (ordersMap[id]?.totalWeightKg || 0), 0);
   const totalCubage = assignedIds.reduce((sum, id) => sum + (ordersMap[id]?.totalCubageM3 || 0), 0);
   const color = ROUTE_COLORS[vehicleIndex % ROUTE_COLORS.length];
+  // Nota dengan nama pelanggan ATAU no. HP yang sama digabung jadi 1 baris/drop,
+  // supaya tidak dikirim terpisah - pakai algoritma clustering yang sama
+  // dengan yang dipakai auto-allocate (union-find nama/telepon).
+  const stops = clusterOrders(assignedIds, ordersMap);
 
   return (
     <div
@@ -27,7 +184,7 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
           </div>
           <div className="text-right">
             <p className="text-[10px] text-slate-600 font-mono">{selectedDate}</p>
-            <p className="text-sm font-extrabold text-slate-900">{assignedIds.length} STOP</p>
+            <p className="text-sm font-extrabold text-slate-900">{stops.length} STOP</p>
           </div>
         </div>
       </div>
@@ -39,7 +196,7 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
           <div>
             <h4 className="font-display font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2 flex-wrap">
               {vehicle.vehicle} &bull; {vehicle.plate}
-              <span className="text-xs font-normal text-slate-400">({assignedIds.length} stops)</span>
+              <span className="text-xs font-normal text-slate-400">({stops.length} stops &middot; {assignedIds.length} nota)</span>
             </h4>
             <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Supir: {vehicle.driver}</p>
           </div>
@@ -76,122 +233,27 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-white/5 print:divide-y-0">
-            {assignedIds.length === 0 ? (
+            {stops.length === 0 ? (
               <tr>
                 <td colSpan={4} className="p-6 text-center text-slate-400 italic">
                   Belum ada pengiriman dialokasikan ke armada ini.
                 </td>
               </tr>
             ) : (
-              assignedIds.map((id, idx) => {
-                const order = ordersMap[id];
-                if (!order) return null;
-                const loadOrder = assignedIds.length - idx; // LIFO: dimuat kebalikan urutan antar
-                return (
-                  <tr
-                    key={id}
-                    className="hover:bg-slate-50 dark:hover:bg-[#151720]/40 align-top print:break-inside-avoid print:even:bg-slate-50"
-                  >
-                    <td className="p-2 print:p-1.5 text-center print:border print:border-slate-300 print:align-top">
-                      <span
-                        className="w-5 h-5 print:w-6 print:h-6 rounded-full text-white print:text-slate-900 print:bg-white font-mono font-bold text-[10px] print:text-[11px] flex items-center justify-center mx-auto print:border-2 print:border-slate-800"
-                        style={{ backgroundColor: color }}
-                      >
-                        {idx + 1}
-                      </span>
-                      <div className="hidden print:block text-[7px] text-slate-500 mt-1 leading-none">&#9744; selesai</div>
-                    </td>
-                    <td className="p-2 print:p-1.5 max-w-sm print:border print:border-slate-300 print:align-top">
-                      <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="font-mono text-[10.5px] print:text-[9px] font-bold text-slate-900 dark:text-white">
-                          {order.NPno}
-                        </span>
-                        <span className="text-[9px] print:text-[8px] text-slate-400 print:text-slate-500">
-                          Muat ke-<strong>{loadOrder}</strong>
-                        </span>
-                        {order.priorityRit1 && (
-                          <span className="text-[8.5px] print:text-[8px] px-1.5 py-0.5 bg-red-100 dark:bg-red-500/15 print:bg-transparent text-red-700 dark:text-red-400 print:text-red-700 rounded font-bold border border-red-200 dark:border-red-500/20 print:border print:border-red-700 shrink-0">
-                            &#9200; PRIORITAS RIT 1
-                          </span>
-                        )}
-                      </div>
-                      <div className="font-bold text-[11px] print:text-[10px] text-slate-900 dark:text-white mt-1 print:mt-1.5">
-                        {order.customer}
-                      </div>
-                      <p className="text-slate-500 dark:text-slate-400 print:text-slate-700 text-[10px] print:text-[8.5px] leading-tight mt-0.5 print:mt-1">
-                        {order.address} {order.address2 ? `(${order.address2})` : ''}
-                      </p>
-                      {order.phone && (
-                        <span className="font-mono text-[9.5px] print:text-[8.5px] text-emerald-600 dark:text-emerald-400 print:text-slate-800 font-semibold block mt-0.5 print:mt-1">
-                          &#9742; {order.phone}
-                        </span>
-                      )}
-                      {order.comments.length > 0 && (
-                        <span className="inline-block mt-0.5 print:mt-1 px-1 py-0.5 bg-amber-100 dark:bg-amber-500/15 print:bg-transparent print:px-0 print:py-0 text-amber-700 dark:text-amber-400 print:text-slate-900 text-[9px] print:text-[8.5px] rounded font-medium print:font-bold border border-amber-200 dark:border-amber-500/20 print:border-0">
-                          &#128172; {order.comments.join(' / ')}
-                        </span>
-                      )}
-                      <div className="text-[9.5px] print:hidden font-mono font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
-                        &#9878; {order.totalWeightKg.toFixed(1)} kg &middot; {order.totalCubageM3.toFixed(3)} m&sup3;
-                      </div>
-                      <div className="hidden print:block mt-2 pt-1 border-t border-dotted border-slate-400">
-                        <span className="text-[7.5px] text-slate-500">Catatan: </span>
-                        <span className="inline-block align-bottom border-b border-slate-400" style={{ width: '75%' }}>
-                          &nbsp;
-                        </span>
-                      </div>
-                    </td>
-                    <td className="p-2 print:p-1.5 print:border print:border-slate-300 print:align-top">
-                      <div className="space-y-0.5 print:space-y-1">
-                        {order.lines.map((line, li) => (
-                          <div key={li} className="flex items-center gap-1 text-[10px] print:text-[8.5px] leading-tight border-b border-slate-100 dark:border-white/5 print:border-b-0 pb-0.5 print:pb-0">
-                            <span className="text-slate-600 dark:text-slate-300 print:text-slate-800 flex items-center gap-1 flex-wrap">
-                              <span className="hidden print:inline text-slate-400">&bull;</span>
-                              {line.itemName} &times; <strong className="text-slate-900 dark:text-white">{line.qty}</strong> {line.uom}
-                              {line.weightSource === 'sizeEstimate' && (
-                                <span
-                                  className="print:hidden text-[8px] px-1 py-0.5 bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-500/20 shrink-0"
-                                  title="Berat ditaksir dari Master Tambahan (ukuran), bukan dari Master Item"
-                                >
-                                  &#8776; estimasi
-                                </span>
-                              )}
-                              {line.missing && (
-                                <span
-                                  className="print:hidden text-[8px] px-1 py-0.5 bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 rounded border border-rose-200 dark:border-rose-500/20 shrink-0"
-                                  title="Kode barang tidak ditemukan di Master Item maupun Master Tambahan"
-                                >
-                                  &#9888; berat n/a
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="p-2 text-right no-print">
-                      <select
-                        value={vehicleIndex}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === 'REMOVE') onRemoveStop(id, vehicleIndex);
-                          else onMoveStop(id, vehicleIndex, parseInt(value, 10));
-                        }}
-                        className="text-xs border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1d26] text-slate-700 dark:text-white py-1 px-1.5 rounded-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-500"
-                      >
-                        {allVehicles.map((v, vi) => (
-                          <option key={vi} value={vi}>
-                            🚚 {v.vehicle}
-                          </option>
-                        ))}
-                        <option value="REMOVE" className="text-rose-600">
-                          🗑️ Keluarkan (Reschedule)
-                        </option>
-                      </select>
-                    </td>
-                  </tr>
-                );
-              })
+              stops.map((stop, stopIdx) => (
+                <StopRow
+                  key={stop.members.join(',')}
+                  stop={stop}
+                  stopIdx={stopIdx}
+                  totalStops={stops.length}
+                  ordersMap={ordersMap}
+                  color={color}
+                  vehicleIndex={vehicleIndex}
+                  allVehicles={allVehicles}
+                  onMoveStop={onMoveStop}
+                  onRemoveStop={onRemoveStop}
+                />
+              ))
             )}
           </tbody>
         </table>
