@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   FLEET: 'm10_fleet',
   ALLOCATIONS: 'm10_allocations',
   WAREHOUSE: 'm10_warehouse',
+  WAREHOUSE_LOCATIONS: 'm10_warehouse_locations',
 };
 
 export function loadJSON(key, fallback) {

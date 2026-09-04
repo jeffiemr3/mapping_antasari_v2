@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
-import { X, KeyRound, Truck } from 'lucide-react';
+import { X, KeyRound, Truck, MapPinned } from 'lucide-react';
 import { STORAGE_KEYS } from '../utils/storage';
 import { parseFleetExcel, parseFleetDelimited } from '../utils/excelImport';
+import { parseWarehouseLocationExcel } from '../utils/warehouseLocations';
 
-export default function SettingsModal({ onClose, fleetRows, onFleetChange }) {
+export default function SettingsModal({ onClose, fleetRows, onFleetChange, warehouseLocations, onWarehouseLocationsChange }) {
   const [apiKey, setApiKey] = useState(() => {
     try {
       return localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || '';
@@ -13,6 +14,9 @@ export default function SettingsModal({ onClose, fleetRows, onFleetChange }) {
   });
   const [fleetStatus, setFleetStatus] = useState(null);
   const fleetInputRef = useRef(null);
+  const [locationStatus, setLocationStatus] = useState(null);
+  const locationInputRef = useRef(null);
+  const locationItemCount = warehouseLocations ? Object.keys(warehouseLocations).length : 0;
 
   function saveApiKey() {
     try {
@@ -43,6 +47,25 @@ export default function SettingsModal({ onClose, fleetRows, onFleetChange }) {
       setFleetStatus({ type: 'error', message: err.message });
     } finally {
       if (fleetInputRef.current) fleetInputRef.current.value = '';
+    }
+  }
+
+  async function handleLocationFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const index = parseWarehouseLocationExcel(await file.arrayBuffer());
+      if (!index) {
+        setLocationStatus({ type: 'error', message: "Header 'Storage Location Id' / 'Item No' tidak ditemukan di file." });
+      } else {
+        onWarehouseLocationsChange(index);
+        const itemCount = Object.keys(index).length;
+        setLocationStatus({ type: 'ok', message: `Berhasil memuat lokasi untuk ${itemCount} kode barang.` });
+      }
+    } catch (err) {
+      setLocationStatus({ type: 'error', message: err.message });
+    } finally {
+      if (locationInputRef.current) locationInputRef.current.value = '';
     }
   }
 
@@ -103,6 +126,30 @@ export default function SettingsModal({ onClose, fleetRows, onFleetChange }) {
           <p className="text-[10px] text-slate-500">
             Kolom: Driver, Vehicle, nomor polisi, Height, Width, Length (cm), Weight (gram), Cubage (cm&sup3;). Saat ini{' '}
             {fleetRows.length} baris armada tersimpan.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10.5px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+            <MapPinned className="w-3.5 h-3.5 text-teal-500" />
+            Import Lokasi Gudang (Report Stock Warehouse By Location)
+          </label>
+          <input
+            ref={locationInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleLocationFile}
+            className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 dark:file:bg-[#1c1d26] file:text-slate-700 dark:file:text-slate-200 file:font-semibold hover:file:bg-slate-200 dark:hover:file:bg-[#222431] file:cursor-pointer cursor-pointer"
+          />
+          {locationStatus && (
+            <p className={`text-[11px] ${locationStatus.type === 'ok' ? 'text-teal-600 dark:text-teal-400' : 'text-rose-600 dark:text-rose-400'}`}>
+              {locationStatus.message}
+            </p>
+          )}
+          <p className="text-[10px] text-slate-500">
+            Export langsung dari sistem toko (menu Stock Warehouse By Location). Dipakai supaya manifest yang dikirim ke
+            operator gudang menampilkan rak/zona pengambilan tiap barang. Saat ini lokasi untuk {locationItemCount} kode
+            barang tersimpan.
           </p>
         </div>
       </div>

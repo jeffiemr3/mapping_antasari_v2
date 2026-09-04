@@ -1,6 +1,8 @@
-import { Printer, Route } from 'lucide-react';
+import { useState } from 'react';
+import { Printer, Route, Send } from 'lucide-react';
 import { ROUTE_COLORS } from '../data/constants';
 import { clusterOrders } from '../utils/allocation';
+import SendToOperatorModal from './SendToOperatorModal';
 
 function StopRow({ stop, stopIdx, totalStops, ordersMap, color, vehicleIndex, allVehicles, onMoveStop, onRemoveStop }) {
   const members = stop.members;
@@ -280,8 +282,18 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
   );
 }
 
-export default function ManifestSection({ drivers, assignments, ordersMap, selectedDate, onMoveStop, onRemoveStop, focusedVehicleIdx }) {
+export default function ManifestSection({
+  drivers,
+  assignments,
+  ordersMap,
+  selectedDate,
+  onMoveStop,
+  onRemoveStop,
+  focusedVehicleIdx,
+  warehouseLocations,
+}) {
   const totalAssigned = assignments.reduce((sum, arr) => sum + arr.length, 0);
+  const [sendModalOpen, setSendModalOpen] = useState(false);
 
   return (
     <section className="space-y-4">
@@ -295,14 +307,24 @@ export default function ManifestSection({ drivers, assignments, ordersMap, selec
             Urutan Ke-N merupakan petunjuk rute. Barang stop terakhir dimuat paling belakang (LIFO).
           </p>
         </div>
-        <button
-          onClick={() => window.print()}
-          disabled={totalAssigned === 0}
-          className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
-        >
-          <Printer className="w-4 h-4" />
-          Cetak Semua Rute (Ramping &amp; Hemat Kertas)
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSendModalOpen(true)}
+            disabled={totalAssigned === 0}
+            className="bg-white dark:bg-[#111218] hover:bg-slate-50 dark:hover:bg-[#1c1d26] disabled:opacity-50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+          >
+            <Send className="w-4 h-4 text-indigo-500" />
+            Kirim ke Operator
+          </button>
+          <button
+            onClick={() => window.print()}
+            disabled={totalAssigned === 0}
+            className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+          >
+            <Printer className="w-4 h-4" />
+            Cetak Semua Rute (Ramping &amp; Hemat Kertas)
+          </button>
+        </div>
       </div>
 
       {drivers.map((vehicle, idx) => {
@@ -327,6 +349,17 @@ export default function ManifestSection({ drivers, assignments, ordersMap, selec
           />
         );
       })}
+
+      {sendModalOpen && (
+        <SendToOperatorModal
+          onClose={() => setSendModalOpen(false)}
+          drivers={drivers}
+          assignments={assignments}
+          ordersMap={ordersMap}
+          selectedDate={selectedDate}
+          warehouseLocations={warehouseLocations}
+        />
+      )}
     </section>
   );
 }

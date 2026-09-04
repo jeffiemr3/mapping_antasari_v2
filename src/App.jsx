@@ -40,6 +40,7 @@ export default function App() {
   const [sizeWeightRows, setSizeWeightRows] = useLocalStorage('m10_size_weight_master', sizeWeightSeed);
   const [fleetRows, setFleetRows] = useLocalStorage(STORAGE_KEYS.FLEET, fleetSeed);
   const [warehouse, setWarehouse] = useLocalStorage(STORAGE_KEYS.WAREHOUSE, DEFAULT_WAREHOUSE);
+  const [warehouseLocations, setWarehouseLocations] = useLocalStorage(STORAGE_KEYS.WAREHOUSE_LOCATIONS, null);
   const [dispatch, setDispatch] = useLocalStorage(STORAGE_KEYS.ALLOCATIONS, EMPTY_DISPATCH);
 
   // ---- Pengaturan tampilan (persisten) ------------------------------------
@@ -311,12 +312,21 @@ export default function App() {
           onMoveStop={handleMoveStop}
           onRemoveStop={handleRemoveStop}
           focusedVehicleIdx={focusedVehicleIdx}
+          warehouseLocations={warehouseLocations}
         />
       </main>
 
       <Footer />
 
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} fleetRows={fleetRows} onFleetChange={setFleetRows} />}
+      {settingsOpen && (
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          fleetRows={fleetRows}
+          onFleetChange={setFleetRows}
+          warehouseLocations={warehouseLocations}
+          onWarehouseLocationsChange={setWarehouseLocations}
+        />
+      )}
       {sizeWeightOpen && (
         <SizeWeightModal onClose={() => setSizeWeightOpen(false)} rows={sizeWeightRows} onRowsChange={setSizeWeightRows} />
       )}

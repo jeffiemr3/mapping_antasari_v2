@@ -21,7 +21,9 @@ Alat perencanaan rute pengiriman untuk **Mitra10 Antasari** (Bandar Lampung): im
 - **Pesanan 1 pelanggan melebihi kapasitas satu mobil**: ditangani 2 cara sekaligus —
   1. **Otomatis (antar-nota)**: kalau total gabungan semua nota 1 pelanggan melebihi kapasitas armada terbesar, sistem otomatis membagi nota-notanya ke beberapa mobil berbeda (tiap nota tetap utuh, tidak dipotong) alih-alih macet di "Belum Teralokasi".
   2. **Manual (dalam 1 nota)**: kalau SATU nota sendirian sudah melebihi kapasitas mobil manapun (kasus yang tidak bisa dibagi otomatis), nota itu ditandai "⚠️ Melebihi kapasitas mobil manapun" di panel Belum Teralokasi, dengan tombol **"Pecah Nota"** — bagi qty per item jadi 2-6 bagian (default rata, bisa diedit manual), jadi beberapa nota baru (`NPno-A`, `NPno-B`, ...) yang masing-masing bisa dialokasikan ke mobil berbeda.
-- **100% client-side** — tidak ada backend. Semua data tersimpan di `localStorage` browser.
+- **Data inti tetap 100% client-side** — nota, armada, alokasi, katalog tersimpan di `localStorage` browser, tanpa backend.
+- **Kirim ke Operator (Tampilan Operator Gudang)**: setelah alokasi selesai, tombol "Kirim ke Operator" di bagian Manifest mengunci snapshot manifest saat ini dan membuat link + QR (`/#/picker/KODE`) yang bisa dibuka di HP operator gudang mana pun — menampilkan checklist barang per armada (diringkas per kode barang & diurutkan lokasi rak, atau per stop/pelanggan), tanpa perlu satu jaringan WiFi. Butuh setup Firebase sekali di awal, lihat [`PANDUAN_OPERATOR_GUDANG.md`](./PANDUAN_OPERATOR_GUDANG.md).
+- **Import Lokasi Gudang**: menu Pengaturan bisa import file export "Report Stock Warehouse By Location" dari sistem toko, supaya tampilan operator menandai rak/zona pengambilan tiap barang.
 
 ## Menjalankan secara lokal
 
@@ -77,5 +79,6 @@ Karena direkonstruksi tanpa source asli, beberapa detail berikut adalah **penyed
 ## Rencana lanjutan yang mungkin berguna
 
 - Pindahkan panggilan Gemini API ke backend kecil kalau nanti dipakai multi-user (supaya API key tidak terekspos di browser tiap orang).
-- Tambah backend + database kalau butuh sinkron multi-device / multi-user (saat ini sengaja tetap client-only sesuai permintaan).
+- ~~Tambah backend + database kalau butuh sinkron multi-device / multi-user~~ — sudah ada lewat fitur "Kirim ke Operator" (Firestore, satu arah/snapshot). Kalau nanti perlu live-sync dua arah (mis. operator centang barang & dispatcher lihat progresnya real-time), tinggal ganti `getDoc` jadi `onSnapshot` di `pickerSync.js` + kirim update checklist balik ke Firestore.
 - Custom date-picker dengan penanda PDD seperti versi asli.
+- TTL / auto-cleanup manifest lama di Firestore (lihat catatan opsional di `PANDUAN_OPERATOR_GUDANG.md`).
