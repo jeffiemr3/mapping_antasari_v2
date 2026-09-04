@@ -6,7 +6,14 @@ function UnallocatedCard({ order, vehicles, onManualAllocate, onGeocode, geocodi
   return (
     <div className="bg-slate-50 dark:bg-[#151720] border border-slate-200 dark:border-white/5 rounded-xl p-3 space-y-1.5">
       <p className="font-mono text-[10px] text-slate-400">{order.NPno}</p>
-      <p className="font-bold text-sm text-slate-900 dark:text-white">{order.customer}</p>
+      <p className="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+        {order.customer}
+        {order.priorityRit1 && (
+          <span className="text-[8.5px] px-1.5 py-0.5 bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400 rounded font-bold border border-red-200 dark:border-red-500/20">
+            &#9200; PRIORITAS RIT 1
+          </span>
+        )}
+      </p>
       <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-1">
         <MapPin className="w-3 h-3 shrink-0 mt-0.5" />
         {order.address}

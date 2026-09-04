@@ -15,6 +15,7 @@ Alat perencanaan rute pengiriman untuk **Mitra10 Antasari** (Bandar Lampung): im
 - **Alokasi manual** & pemindahan stop antar-armada.
 - **Reschedule**: pindahkan tanggal pengiriman nota yang sudah ada, atau catat entri reschedule baru.
 - **Cetak rute** per armada (mode cetak menyembunyikan elemen non-esensial).
+- **Prioritas Rit 1** (SLA waktu): nota dengan komentar mengandung "rit 1", "sebelum jam", "maximal jam", "max jam", atau "maks" otomatis (1) diusahakan masuk ke armada yang jalan RIT 1 lebih dulu daripada rit lainnya, dan (2) dijadikan stop paling awal dalam rute rit tersebut — meskipun secara geografis bukan yang terdekat. Ditandai badge merah "⏰ PRIORITAS RIT 1" di panel Belum Teralokasi maupun di Manifest (layar & cetak).
 - **Master Tambahan** (cadangan berat/box berdasarkan ukuran): kalau kode barang di sebuah nota tidak ditemukan di Master Item, aplikasi coba baca ukuran dari nama barangnya (mis. "...70X70CM...") dan pakai berat/box dari tabel referensi ini (bisa diedit, upload/download Excel sendiri). Kubikasi tetap tidak diketahui lewat jalur ini karena tabelnya cuma punya data berat.
 - **100% client-side** — tidak ada backend. Semua data tersimpan di `localStorage` browser.
 

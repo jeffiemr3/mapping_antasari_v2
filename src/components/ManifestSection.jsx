@@ -109,6 +109,11 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
                         <span className="text-[9px] print:text-[8px] text-slate-400 print:text-slate-500">
                           Muat ke-<strong>{loadOrder}</strong>
                         </span>
+                        {order.priorityRit1 && (
+                          <span className="text-[8.5px] print:text-[8px] px-1.5 py-0.5 bg-red-100 dark:bg-red-500/15 print:bg-transparent text-red-700 dark:text-red-400 print:text-red-700 rounded font-bold border border-red-200 dark:border-red-500/20 print:border print:border-red-700 shrink-0">
+                            &#9200; PRIORITAS RIT 1
+                          </span>
+                        )}
                       </div>
                       <div className="font-bold text-[11px] print:text-[10px] text-slate-900 dark:text-white mt-1 print:mt-1.5">
                         {order.customer}

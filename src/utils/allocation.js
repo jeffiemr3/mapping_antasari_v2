@@ -29,6 +29,8 @@
 // Semua unit jarak pakai kilometer (Haversine, asumsi bumi bulat).
 // =============================================================================
 
+import { isRit1Vehicle, isPriorityCluster } from './priority.js';
+
 /** Kunci unik satu baris armada (dipakai untuk checklist armada aktif). */
 export function fleetRowKey(row) {
   return `${row.driver}|${row.vehicle}|${row.plate}`;
@@ -200,6 +202,56 @@ export function autoAllocate(orderIds, ordersMap, activeFleet, startPoint, maxLo
     routeClusters: [],
   }));
 
+  // ---------------------------------------------------------------------
+  // TAHAP PRIORITAS: nota dengan komentar "rit 1" / "sebelum jam" / "max(imal)
+  // jam" / "maks" harus diusahakan masuk armada RIT 1 dulu, sebelum sisanya
+  // dibagi rata secara geografis di tahap normal berikutnya.
+  // ---------------------------------------------------------------------
+  const rit1VehicleIdx = vehicles
+    .map((v, idx) => (isRit1Vehicle(v.vehicle) ? idx : -1))
+    .filter((idx) => idx !== -1);
+
+  if (rit1VehicleIdx.length > 0) {
+    let priorityAssignedSomething = true;
+    while (priorityAssignedSomething) {
+      priorityAssignedSomething = false;
+      for (const k of rit1VehicleIdx) {
+        const state = routeState[k];
+        let bestIdx = -1;
+        let bestDist = Infinity;
+
+        pending.forEach((cluster, idx) => {
+          if (!isPriorityCluster(cluster, ordersMap)) return;
+          if (
+            cluster.totalWeightKg > state.remW + 1e-9 ||
+            cluster.totalCubageM3 > state.remC + 1e-9
+          ) {
+            return;
+          }
+          const dist = haversineKm(state.curLat, state.curLng, cluster.lat, cluster.lng);
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = idx;
+          }
+        });
+
+        if (bestIdx !== -1) {
+          const cluster = pending.splice(bestIdx, 1)[0];
+          state.routeClusters.push(cluster);
+          state.remW -= cluster.totalWeightKg;
+          state.remC -= cluster.totalCubageM3;
+          state.curLat = cluster.lat;
+          state.curLng = cluster.lng;
+          priorityAssignedSomething = true;
+        }
+      }
+    }
+  }
+  // Nota prioritas yang TETAP tidak muat di armada rit 1 manapun (kapasitas
+  // penuh) dibiarkan di `pending` - akan diikutkan tahap normal di bawah
+  // seperti nota biasa (lebih baik terkirim di rit lain daripada tidak sama
+  // sekali, tapi ini kasus pengecualian yang sebaiknya dicek manual).
+
   let iterations = 0;
   while (pending.length > 0 && iterations < MAX_ITERATIONS) {
     let assignedSomething = false;
@@ -274,8 +326,22 @@ export function autoAllocate(orderIds, ordersMap, activeFleet, startPoint, maxLo
 
   // Rapikan urutan stop per armada (2-opt), lalu jabarkan tiap cluster
   // menjadi daftar NPno berurutan (nearest-neighbor di dalam cluster).
+  // Cluster prioritas SELALU ditaruh di depan (dioptimasi 2-opt sendiri),
+  // baru disambung cluster normal (2-opt sendiri juga) - supaya nota
+  // "sebelum jam X" tetap jadi stop paling awal, tidak diacak 2-opt gabungan.
   vehicles.forEach((_, k) => {
-    const orderedClusters = optimize2Opt(routeState[k].routeClusters, startPoint);
+    const allClusters = routeState[k].routeClusters;
+    const priorityClusters = allClusters.filter((c) => isPriorityCluster(c, ordersMap));
+    const normalClusters = allClusters.filter((c) => !isPriorityCluster(c, ordersMap));
+
+    const orderedPriority = optimize2Opt(priorityClusters, startPoint);
+    const afterPriorityPoint =
+      orderedPriority.length > 0
+        ? { lat: orderedPriority[orderedPriority.length - 1].lat, lng: orderedPriority[orderedPriority.length - 1].lng }
+        : startPoint;
+    const orderedNormal = optimize2Opt(normalClusters, afterPriorityPoint);
+    const orderedClusters = [...orderedPriority, ...orderedNormal];
+
     let curLat = startPoint.lat;
     let curLng = startPoint.lng;
     orderedClusters.forEach((cluster) => {

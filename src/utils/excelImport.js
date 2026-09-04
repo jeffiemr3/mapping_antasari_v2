@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import { lookupFallbackWeight } from './sizeWeight.js';
+import { hasRitPriorityKeyword } from './priority.js';
 
 // =============================================================================
 // Import "Data Penjualan / Nota" (pesanan pengiriman)
@@ -160,6 +161,7 @@ export function aggregateOrderLines(lines, catalog, sizeWeightMap = {}) {
         totalCubageM3: 0,
         missingItemData: false,
         hasAmsenComment: false,
+        priorityRit1: false,
         comments: [],
         lines: [],
       };
@@ -192,6 +194,7 @@ export function aggregateOrderLines(lines, catalog, sizeWeightMap = {}) {
     const comment = (line.Comment || '').trim();
     if (comment && !order.comments.includes(comment)) order.comments.push(comment);
     if (/amsen/i.test(comment)) order.hasAmsenComment = true;
+    if (hasRitPriorityKeyword(comment)) order.priorityRit1 = true;
 
     order.lines.push({
       itemNo: line.ItemNo,
