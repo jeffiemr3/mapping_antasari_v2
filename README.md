@@ -79,6 +79,6 @@ Karena direkonstruksi tanpa source asli, beberapa detail berikut adalah **penyed
 ## Rencana lanjutan yang mungkin berguna
 
 - Pindahkan panggilan Gemini API ke backend kecil kalau nanti dipakai multi-user (supaya API key tidak terekspos di browser tiap orang).
-- ~~Tambah backend + database kalau butuh sinkron multi-device / multi-user~~ — sudah ada lewat fitur "Kirim ke Operator" (Firestore, satu arah/snapshot). Kalau nanti perlu live-sync dua arah (mis. operator centang barang & dispatcher lihat progresnya real-time), tinggal ganti `getDoc` jadi `onSnapshot` di `pickerSync.js` + kirim update checklist balik ke Firestore.
+- ~~Tambah backend + database kalau butuh sinkron multi-device / multi-user~~ — sudah ada lewat fitur "Kirim ke Operator" (Firebase Realtime Database, satu arah/snapshot). Kalau nanti perlu live-sync dua arah (mis. operator centang barang & dispatcher lihat progresnya real-time), tinggal ganti `get` jadi `onValue` di `pickerSync.js` + kirim update checklist balik ke Realtime Database.
 - Custom date-picker dengan penanda PDD seperti versi asli.
-- TTL / auto-cleanup manifest lama di Firestore (lihat catatan opsional di `PANDUAN_OPERATOR_GUDANG.md`).
+- Auto-cleanup manifest lama di Realtime Database (lihat catatan opsional di `PANDUAN_OPERATOR_GUDANG.md`).

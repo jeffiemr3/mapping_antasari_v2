@@ -1,4 +1,4 @@
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, set, get, serverTimestamp } from 'firebase/database';
 import { getDb, isFirebaseConfigured } from '../lib/firebase';
 import { clusterOrders } from './allocation';
 import { lookupLocations } from './warehouseLocations';
@@ -15,10 +15,10 @@ function randomCode(len = 5) {
 
 /**
  * Rakit snapshot manifest (armada -> stop -> item) yang siap dikirim ke
- * Firestore untuk dibaca ulang oleh Tampilan Operator (PickerView). Struktur
- * & urutan stop sama persis dengan yang dipakai ManifestSection layar/cetak
- * (clusterOrders yang sama), supaya operator lihat urutan Rit yang sama
- * dengan yang dicetak untuk supir.
+ * Realtime Database untuk dibaca ulang oleh Tampilan Operator (PickerView).
+ * Struktur & urutan stop sama persis dengan yang dipakai ManifestSection
+ * layar/cetak (clusterOrders yang sama), supaya operator lihat urutan Rit
+ * yang sama dengan yang dicetak untuk supir.
  */
 export function buildManifestSnapshot({ drivers, assignments, ordersMap, selectedDate, warehouseLocations }) {
   const vehicles = drivers.map((vehicle, vIdx) => {
@@ -89,31 +89,32 @@ export function buildManifestSnapshot({ drivers, assignments, ordersMap, selecte
   };
 }
 
-/** Simpan snapshot ke Firestore & kembalikan kode pendek untuk dibagikan ke operator. */
+/** Simpan snapshot ke Realtime Database & kembalikan kode pendek untuk dibagikan ke operator. */
 export async function sendManifestSnapshot(payload) {
   if (!isFirebaseConfigured) {
     throw new Error('Sinkronisasi belum di-setup. Lihat PANDUAN_OPERATOR_GUDANG.md untuk cara mengaktifkannya.');
   }
   const db = getDb();
   const code = randomCode();
-  await setDoc(doc(db, 'manifests', code), {
+  await set(ref(db, `manifests/${code}`), {
     ...payload,
-    // Dicocokkan ke Firestore Security Rules (lihat PANDUAN_OPERATOR_GUDANG.md)
-    // supaya collection "manifests" tidak bisa ditulis sembarangan oleh bot
-    // yang mengetahui nama collection-nya, walau tanpa login/auth.
+    // Dicocokkan ke Realtime Database Security Rules (lihat
+    // PANDUAN_OPERATOR_GUDANG.md) supaya path "manifests" tidak bisa ditulis
+    // sembarangan oleh bot yang mengetahui nama project-nya, walau tanpa
+    // login/auth.
     appToken: import.meta.env.VITE_APP_WRITE_TOKEN || '',
     sentAt: serverTimestamp(),
   });
   return code;
 }
 
-/** Ambil snapshot manifest dari Firestore berdasarkan kode (dipakai PickerView). */
+/** Ambil snapshot manifest dari Realtime Database berdasarkan kode (dipakai PickerView). */
 export async function fetchManifestSnapshot(code) {
   if (!isFirebaseConfigured) {
     throw new Error('Sinkronisasi belum di-setup di aplikasi ini.');
   }
   const db = getDb();
-  const snap = await getDoc(doc(db, 'manifests', code));
+  const snap = await get(ref(db, `manifests/${code}`));
   if (!snap.exists()) return null;
-  return snap.data();
+  return snap.val();
 }

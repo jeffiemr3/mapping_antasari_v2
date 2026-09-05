@@ -8,67 +8,65 @@ Fitur ini menambahkan tombol **"Kirim ke Operator"** di bagian Manifest. Begini 
 4. Operator buka link itu di HP-nya sendiri (jaringan apa saja, tidak perlu satu WiFi) → tampilan mobile: daftar barang per armada, diurutkan per lokasi rak (kalau data lokasi gudang sudah diimport), dengan checklist yang bisa dicentang sambil jalan ambil barang.
 5. Ini **satu arah / snapshot** — kalau dispatcher ubah alokasi setelahnya, klik "Kirim ke Operator" lagi untuk membuat link baru (link lama tetap berfungsi tapi datanya jadi versi lama).
 
-Tidak perlu satu jaringan WiFi kantor karena datanya lewat internet (database kecil gratis, bukan server sendiri). Karena aplikasinya sudah online di Vercel, operator tinggal buka link seperti buka website biasa.
+Datanya lewat internet (Firebase Realtime Database, gratis untuk skala ini), jadi operator tidak perlu satu jaringan WiFi kantor — tinggal buka link seperti buka website biasa.
 
-## 1. Buat project Firebase (sekali saja, gratis)
+## Status project Firebase kalian
 
-Firestore dipakai sebagai "kotak surat" kecil tempat manifest disimpan sementara.
+Project **akurasi-mitra10** sudah dibuat dan sudah pakai **Realtime Database**
+(`https://akurasi-mitra10-default-rtdb.firebaseio.com`). Kode aplikasi ini
+sudah disesuaikan untuk itu — tinggal 2 langkah lagi: **atur Security Rules**
+(wajib) dan **isi environment variable di Vercel** (wajib untuk versi online).
 
-1. Buka [console.firebase.google.com](https://console.firebase.google.com), login pakai akun Google (bebas akun mana saja).
-2. **Add project** → beri nama bebas, mis. `mitra10-antasari-mapping`. Google Analytics boleh dimatikan (tidak perlu).
-3. Di menu kiri, buka **Build → Firestore Database** → **Create database**.
-   - Pilih **Production mode** (bukan Test mode — nanti rules-nya kita atur manual di langkah 3).
-   - Pilih lokasi server terdekat, mis. `asia-southeast2 (Jakarta)`.
-4. Di menu kiri atas, klik ikon gerigi **Project settings**. Di tab **General**, scroll ke bawah ke **Your apps** → klik ikon `</>` (Web) → beri nickname bebas (mis. "picker") → **Register app**.
-5. Akan muncul blok `firebaseConfig = { apiKey: "...", authDomain: "...", ... }` — **simpan nilai-nilai ini**, dipakai di langkah 2.
+## 1. Atur Realtime Database Security Rules (WAJIB, sekali saja)
 
-## 2. Isi Environment Variables
+Tanpa ini, siapa pun/bot yang tahu nama project Firebase bisa membaca ATAU
+menulis data manifest kalian secara bebas.
 
-### Untuk development lokal (`npm run dev`)
-Salin `.env.example` jadi `.env.local`, isi dengan nilai dari `firebaseConfig` langkah 1, plus `VITE_APP_WRITE_TOKEN` bebas (string rahasia apa saja, catat untuk langkah 3).
+1. Buka [console.firebase.google.com](https://console.firebase.google.com) → pilih project **akurasi-mitra10**.
+2. Menu kiri **Build → Realtime Database → tab Rules**.
+3. Ganti isinya jadi persis ini, lalu klik **Publish**:
 
-### Untuk production (Vercel)
-Buka project di [vercel.com](https://vercel.com/dashboard) → **Settings → Environment Variables** → tambahkan satu-satu:
-
-| Key | Value |
-|---|---|
-| `VITE_FIREBASE_API_KEY` | dari firebaseConfig |
-| `VITE_FIREBASE_AUTH_DOMAIN` | dari firebaseConfig |
-| `VITE_FIREBASE_PROJECT_ID` | dari firebaseConfig |
-| `VITE_FIREBASE_STORAGE_BUCKET` | dari firebaseConfig |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | dari firebaseConfig |
-| `VITE_FIREBASE_APP_ID` | dari firebaseConfig |
-| `VITE_APP_WRITE_TOKEN` | string rahasia bebas (harus SAMA dengan yang ditulis di rule langkah 3) |
-
-Centang semua environment (Production, Preview, Development), lalu **Redeploy** project (Deployments → titik tiga pada deployment terakhir → Redeploy) supaya env baru terbaca — env variable baru TIDAK otomatis kepakai di deployment lama.
-
-## 3. Atur Firestore Security Rules
-
-Ini yang menentukan siapa boleh baca/tulis data. Karena aplikasi ini tanpa login (operator tinggal buka link), pembacaan memang dibuat terbuka untuk siapa saja yang tahu kode/link-nya (mirip kirim link Google Drive) — tapi **penulisan** dibatasi pakai token rahasia supaya bot yang iseng scan Firestore publik tidak bisa menulis data sampah ke situ.
-
-Di Firebase Console → **Firestore Database → Rules**, ganti isinya jadi:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /manifests/{code} {
-      allow read: if true;
-      allow create: if request.resource.data.appToken == "GANTI_DENGAN_TOKEN_RAHASIA_KALIAN";
-      allow update, delete: if false;
+```json
+{
+  "rules": {
+    "manifests": {
+      "$code": {
+        ".read": true,
+        ".write": "!data.exists() && newData.child('appToken').val() === 'v1dzx2GU6dm2_Leyyi1NEL86LmhWSy1u'"
+      }
     }
   }
 }
 ```
 
-Ganti `GANTI_DENGAN_TOKEN_RAHASIA_KALIAN` dengan **nilai yang sama persis** dengan `VITE_APP_WRITE_TOKEN` di langkah 2. Klik **Publish**.
+Penjelasan singkat:
+- **Baca (`.read: true`)** dibuka untuk siapa saja yang tahu link/kode manifest-nya (mirip kirim link Google Drive) — supaya operator tidak perlu login segala.
+- **Tulis** hanya boleh kalau (a) kode itu belum pernah dipakai sebelumnya (`!data.exists()`, jadi manifest yang sudah terkirim tidak bisa ditimpa/diubah orang lain), DAN (b) menyertakan `appToken` yang sama persis dengan yang tertanam di aplikasi (`v1dzx2GU6dm2_Leyyi1NEL86LmhWSy1u` — nilai ini sudah saya isikan otomatis di file `.env.local` project kalian, dan itu juga yang perlu kalian isi di Environment Variables Vercel pada langkah 2). Ini mencegah bot yang asal coba-coba nulis ke Firebase publik.
 
-> Kalau nanti mau tambah keamanan lebih (mis. dispatcher login dulu), bisa upgrade ke Firebase Authentication — di luar cakupan panduan ini, tanya lagi kalau butuh.
+> Kalau suatu saat mau ganti token rahasia ini (disarankan sebelum repo di-push ke GitHub **publik**), ganti nilainya di sini DAN di `VITE_APP_WRITE_TOKEN` (env lokal & Vercel) secara bersamaan — kalau beda, fitur kirim manifest akan gagal terus.
 
-### (Opsional) Bersihkan data lama otomatis
-Manifest lama tidak perlu disimpan selamanya. Di **Firestore Database → TTL (Time-to-live) policies**, buat policy pada field `sentAt` collection `manifests` (mis. hapus otomatis setelah 30 hari). Kalau di-skip, data lama tetap aman tersimpan, cuma menumpuk pelan-pelan (masih jauh dari batas gratis untuk pemakaian toko sehari-hari).
+## 2. Isi Environment Variables
 
-## 4. Import data lokasi gudang (opsional, tapi sangat disarankan)
+### Development lokal (`npm run dev`)
+Sudah otomatis terisi di file **`.env.local`** yang saya sertakan di project ini — tidak perlu ngapa-ngapain, langsung `npm install && npm run dev` juga sudah tersambung ke Firebase kalian. File ini sengaja tidak ikut ke Git (ada di `.gitignore` lewat pola `*.local`) supaya key tidak nyasar ke riwayat commit publik.
+
+### Production (Vercel)
+Buka project di [vercel.com](https://vercel.com/dashboard) → **Settings → Environment Variables** → tambahkan (centang semua environment: Production, Preview, Development):
+
+| Key | Value |
+|---|---|
+| `VITE_FIREBASE_API_KEY` | `AIzaSyBXdX71IPsv7AvMYTJUUnIvyb3PRPRUmx8` |
+| `VITE_FIREBASE_AUTH_DOMAIN` | `akurasi-mitra10.firebaseapp.com` |
+| `VITE_FIREBASE_DATABASE_URL` | `https://akurasi-mitra10-default-rtdb.firebaseio.com` |
+| `VITE_FIREBASE_PROJECT_ID` | `akurasi-mitra10` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | `akurasi-mitra10.firebasestorage.app` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | `451811488658` |
+| `VITE_FIREBASE_APP_ID` | `1:451811488658:web:68f1776af4fff3cc75074b` |
+| `VITE_APP_WRITE_TOKEN` | `v1dzx2GU6dm2_Leyyi1NEL86LmhWSy1u` |
+
+Setelah diisi semua, **Redeploy** project (Deployments → titik tiga pada deployment terakhir → Redeploy) supaya env baru terbaca — env variable baru TIDAK otomatis kepakai di deployment lama.
+
+## 3. Import data lokasi gudang (opsional, tapi sangat disarankan)
 
 Supaya manifest yang dilihat operator menunjukkan **rak/zona pengambilan** tiap barang, bukan cuma nama barang:
 
@@ -77,7 +75,7 @@ Supaya manifest yang dilihat operator menunjukkan **rak/zona pengambilan** tiap 
 3. Selesai — sekarang setiap kali "Kirim ke Operator" dipakai, tiap barang otomatis dicocokkan ke lokasi rak berdasarkan Item No (kalau ketemu). Barang yang lokasinya tidak ketemu di file tetap muncul di daftar operator, ditandai "⚠️ Lokasi belum diketahui" supaya tidak hilang begitu saja dari checklist.
 4. File ini disimpan di localStorage browser dispatcher saja (sama seperti data lain) — cukup import ulang kalau berpindah device/browser, atau setiap kali ada perubahan lokasi rak yang signifikan.
 
-## 5. Cara pakai sehari-hari (ringkas)
+## 4. Cara pakai sehari-hari (ringkas)
 
 1. Dispatcher: import nota → Auto Mapping → rapikan alokasi seperti biasa.
 2. Klik **Kirim ke Operator** di bagian Manifest.
@@ -85,6 +83,8 @@ Supaya manifest yang dilihat operator menunjukkan **rak/zona pengambilan** tiap 
 4. Operator buka link di HP → pilih armada (tab atas) → mode **Ringkasan** (checklist per kode barang, diurutkan lokasi rak) atau **Per Stop** (lihat per pelanggan/alamat kalau perlu cek detail nota/komentar SLA).
 5. Kalau ada perubahan alokasi setelah link dikirim, klik **Kirim ke Operator** lagi untuk kirim versi terbaru (kode baru, link baru).
 
-## Biaya
+## Biaya & batasan
 
-Firestore punya kuota gratis (Spark plan) yang untuk pemakaian 1 toko (puluhan manifest/hari, dibaca beberapa operator) jauh di bawah limit gratis. Tidak perlu kartu kredit untuk mulai. Kalau suatu saat berkembang jadi banyak toko/traffic tinggi, baru perlu cek [harga Firestore](https://firebase.google.com/pricing).
+Realtime Database punya kuota gratis (Spark plan) yang untuk pemakaian 1 toko (puluhan manifest/hari, dibaca beberapa operator) jauh di bawah limit gratis (1GB penyimpanan, 10GB transfer/bulan). Tidak perlu kartu kredit untuk mulai.
+
+RTDB tidak punya fitur auto-hapus data lama bawaan seperti Firestore TTL — manifest lama akan tetap tersimpan (tidak masalah untuk skala ini, cuma menumpuk pelan-pelan). Kalau nanti mau bersih-bersih berkala, paling gampang lewat tab **Data** di Firebase Console, hapus manual node `manifests/KODE` yang sudah lama tidak dipakai.
