@@ -13,62 +13,70 @@ function randomCode(len = 5) {
   return out;
 }
 
+/** Bangun daftar "stop" (kelompok nota per pelanggan) + item di dalamnya,
+ * lengkap dengan lokasi rak -- dipakai untuk armada pengiriman maupun untuk
+ * kelompok "Titipan Gudang" (nota Amsen Titip yang tidak dikirim pakai armada). */
+function buildStopsPayload(ids, ordersMap, warehouseLocations) {
+  const stops = clusterOrders(ids, ordersMap);
+  const totalStops = stops.length;
+  return stops.map((stop, stopIdx) => {
+    const members = stop.members.filter((id) => ordersMap[id]);
+    const primary = ordersMap[members[0]];
+    const comments = [];
+    members.forEach((id) => {
+      (ordersMap[id]?.comments || []).forEach((c) => {
+        if (!comments.includes(c)) comments.push(c);
+      });
+    });
+    const items = [];
+    members.forEach((id) => {
+      (ordersMap[id]?.lines || []).forEach((line) => {
+        const locations = warehouseLocations ? lookupLocations(warehouseLocations, line.itemNo).slice(0, 3) : [];
+        items.push({
+          npno: id,
+          itemNo: line.itemNo || '',
+          itemName: line.itemName || line.itemNo || '(tanpa nama)',
+          qty: line.qty || 0,
+          uom: line.uom || '',
+          locations: locations.map((l) => ({
+            storageLocationId: l.storageLocationId,
+            zoneId: l.zoneId || '',
+            qty: l.qty || 0,
+          })),
+        });
+      });
+    });
+
+    return {
+      npnos: members,
+      stopNo: stopIdx + 1,
+      loadOrder: totalStops - stopIdx,
+      customer: primary?.customer || '',
+      address: primary?.address || '',
+      address2: primary?.address2 || '',
+      phone: primary?.phone || '',
+      comments,
+      priorityRit1: members.some((id) => ordersMap[id]?.priorityRit1),
+      isMultiNota: members.length > 1,
+      items,
+    };
+  });
+}
+
 /**
  * Rakit snapshot manifest (armada -> stop -> item) yang siap dikirim ke
  * Realtime Database untuk dibaca ulang oleh Tampilan Operator (PickerView).
  * Struktur & urutan stop sama persis dengan yang dipakai ManifestSection
  * layar/cetak (clusterOrders yang sama), supaya operator lihat urutan Rit
- * yang sama dengan yang dicetak untuk supir.
+ * yang sama dengan yang dicetak untuk supir. Kalau ada `gudangIds` (nota
+ * "Amsen Titip" yang dititip di gudang, bukan dikirim pakai armada), itu
+ * disisipkan sebagai "armada" ke-N khusus supaya operator bisa lihat &
+ * checklist dengan tampilan yang sama persis (Ringkasan / Per Stop).
  */
-export function buildManifestSnapshot({ drivers, assignments, ordersMap, selectedDate, warehouseLocations }) {
+export function buildManifestSnapshot({ drivers, assignments, ordersMap, selectedDate, warehouseLocations, gudangIds = [] }) {
   const vehicles = drivers.map((vehicle, vIdx) => {
     const assignedIds = assignments[vIdx] || [];
-    const stops = clusterOrders(assignedIds, ordersMap);
-    const totalStops = stops.length;
-
-    const stopPayload = stops.map((stop, stopIdx) => {
-      const members = stop.members.filter((id) => ordersMap[id]);
-      const primary = ordersMap[members[0]];
-      const comments = [];
-      members.forEach((id) => {
-        (ordersMap[id]?.comments || []).forEach((c) => {
-          if (!comments.includes(c)) comments.push(c);
-        });
-      });
-      const items = [];
-      members.forEach((id) => {
-        (ordersMap[id]?.lines || []).forEach((line) => {
-          const locations = warehouseLocations ? lookupLocations(warehouseLocations, line.itemNo).slice(0, 3) : [];
-          items.push({
-            npno: id,
-            itemNo: line.itemNo || '',
-            itemName: line.itemName || line.itemNo || '(tanpa nama)',
-            qty: line.qty || 0,
-            uom: line.uom || '',
-            locations: locations.map((l) => ({
-              storageLocationId: l.storageLocationId,
-              zoneId: l.zoneId || '',
-              qty: l.qty || 0,
-            })),
-          });
-        });
-      });
-
-      return {
-        npnos: members,
-        stopNo: stopIdx + 1,
-        loadOrder: totalStops - stopIdx,
-        customer: primary?.customer || '',
-        address: primary?.address || '',
-        address2: primary?.address2 || '',
-        phone: primary?.phone || '',
-        comments,
-        priorityRit1: members.some((id) => ordersMap[id]?.priorityRit1),
-        isMultiNota: members.length > 1,
-        items,
-      };
-    });
-
+    const stopPayload = buildStopsPayload(assignedIds, ordersMap, warehouseLocations);
     const totalWeightKg = assignedIds.reduce((sum, id) => sum + (ordersMap[id]?.totalWeightKg || 0), 0);
     const totalCubageM3 = assignedIds.reduce((sum, id) => sum + (ordersMap[id]?.totalCubageM3 || 0), 0);
 
@@ -82,6 +90,20 @@ export function buildManifestSnapshot({ drivers, assignments, ordersMap, selecte
       stops: stopPayload,
     };
   });
+
+  if (gudangIds.length > 0) {
+    const gudangStops = buildStopsPayload(gudangIds, ordersMap, warehouseLocations);
+    vehicles.push({
+      vehicle: 'Titipan Gudang',
+      plate: '-',
+      driver: '-',
+      isGudang: true,
+      totalWeightKg: 0,
+      totalCubageM3: 0,
+      stopCount: gudangStops.length,
+      stops: gudangStops,
+    });
+  }
 
   return {
     selectedDate,

@@ -453,6 +453,7 @@ export default function ManifestSection({
   onRemoveStop,
   focusedVehicleIdx,
   warehouseLocations,
+  gudangIds = [],
 }) {
   const totalAssigned = assignments.reduce((sum, arr) => sum + arr.length, 0);
   const [sendModalOpen, setSendModalOpen] = useState(false);
@@ -472,7 +473,7 @@ export default function ManifestSection({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setSendModalOpen(true)}
-            disabled={totalAssigned === 0}
+            disabled={totalAssigned === 0 && gudangIds.length === 0}
             className="flex-1 sm:flex-none bg-white dark:bg-[#111218] hover:bg-slate-50 dark:hover:bg-[#1c1d26] disabled:opacity-50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
           >
             <Send className="w-4 h-4 text-indigo-500" />
@@ -521,6 +522,7 @@ export default function ManifestSection({
           ordersMap={ordersMap}
           selectedDate={selectedDate}
           warehouseLocations={warehouseLocations}
+          gudangIds={gudangIds}
         />
       )}
     </section>

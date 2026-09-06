@@ -7,6 +7,7 @@ import FleetPicker from './components/FleetPicker';
 import StatsRow from './components/StatsRow';
 import FleetOverviewCard from './components/FleetOverviewCard';
 import AmsenExclusionSection from './components/AmsenExclusionSection';
+import GudangSection from './components/GudangSection';
 import UnallocatedList from './components/UnallocatedList';
 import ReschedulePanel from './components/ReschedulePanel';
 import MapView from './components/MapView';
@@ -31,7 +32,7 @@ import { toDDMMYYYY } from './utils/format';
 import fleetSeed from './data/fleetSeed.json';
 import sizeWeightSeed from './data/sizeWeightSeed.json';
 
-const EMPTY_DISPATCH = { drivers: [], assignments: [], unallocated: [] };
+const EMPTY_DISPATCH = { drivers: [], assignments: [], unallocated: [], gudangIds: [] };
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -81,11 +82,15 @@ export default function App() {
   });
 
   const allAssignedIds = useMemo(() => new Set(dispatch.assignments.flat()), [dispatch.assignments]);
+  const gudangIds = useMemo(() => dispatch.gudangIds || [], [dispatch.gudangIds]);
+  const gudangIdSet = useMemo(() => new Set(gudangIds), [gudangIds]);
 
   const amsenIdsToShow = useMemo(() => {
     if (!excludeAmsen) return [];
-    return orderIdsForDate.filter((id) => ordersMap[id]?.hasAmsenComment && !allAssignedIds.has(id));
-  }, [excludeAmsen, orderIdsForDate, ordersMap, allAssignedIds]);
+    return orderIdsForDate.filter(
+      (id) => ordersMap[id]?.hasAmsenComment && !allAssignedIds.has(id) && !gudangIdSet.has(id)
+    );
+  }, [excludeAmsen, orderIdsForDate, ordersMap, allAssignedIds, gudangIdSet]);
 
   const unallocatedIdsToShow = useMemo(
     () => dispatch.unallocated.filter((id) => !allAssignedIds.has(id) && ordersMap[id]),
@@ -160,6 +165,20 @@ export default function App() {
       assignments: d.assignments.map((arr, i) => (i === fromIdx ? arr.filter((id) => id !== orderId) : arr)),
       unallocated: d.unallocated.includes(orderId) ? d.unallocated : [...d.unallocated, orderId],
     }));
+  }
+
+  /** Titip nota "Amsen" ke Gudang (bukan dikirim pakai armada). Nanti ikut
+   * terkirim ke operator sebagai tab "Titipan Gudang" tersendiri. */
+  function handleAddToGudang(npno) {
+    setDispatch((d) => {
+      const current = d.gudangIds || [];
+      if (current.includes(npno)) return d;
+      return { ...d, gudangIds: [...current, npno] };
+    });
+  }
+
+  function handleRemoveFromGudang(npno) {
+    setDispatch((d) => ({ ...d, gudangIds: (d.gudangIds || []).filter((id) => id !== npno) }));
   }
 
   /** Hapus satu armada dari rute hari ini. Nota yang sudah dialokasikan otomatis
@@ -372,7 +391,10 @@ export default function App() {
           onManualAllocate={handleManualAllocate}
           onGeocode={handleGeocode}
           geocodingId={geocodingId}
+          onAddToGudang={handleAddToGudang}
         />
+
+        <GudangSection gudangIds={gudangIds} ordersMap={ordersMap} onRemoveFromGudang={handleRemoveFromGudang} />
 
         {geocodeError && <p className="text-xs text-rose-500 no-print">{geocodeError}</p>}
 
@@ -422,6 +444,7 @@ export default function App() {
           onRemoveStop={handleRemoveStop}
           focusedVehicleIdx={focusedVehicleIdx}
           warehouseLocations={warehouseLocations}
+          gudangIds={gudangIds}
         />
       </main>
 

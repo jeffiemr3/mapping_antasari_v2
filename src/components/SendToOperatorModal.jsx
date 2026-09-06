@@ -8,7 +8,7 @@ function pickerUrl(code) {
   return `${window.location.origin}/#/picker/${code}`;
 }
 
-export default function SendToOperatorModal({ onClose, drivers, assignments, ordersMap, selectedDate, warehouseLocations }) {
+export default function SendToOperatorModal({ onClose, drivers, assignments, ordersMap, selectedDate, warehouseLocations, gudangIds = [] }) {
   const [status, setStatus] = useState('idle'); // idle | sending | done | error
   const [errorMsg, setErrorMsg] = useState('');
   const [code, setCode] = useState(null);
@@ -21,9 +21,9 @@ export default function SendToOperatorModal({ onClose, drivers, assignments, ord
     setStatus('sending');
     setErrorMsg('');
     try {
-      const payload = buildManifestSnapshot({ drivers, assignments, ordersMap, selectedDate, warehouseLocations });
+      const payload = buildManifestSnapshot({ drivers, assignments, ordersMap, selectedDate, warehouseLocations, gudangIds });
       if (payload.vehicles.length === 0) {
-        throw new Error('Belum ada nota yang teralokasi ke armada manapun. Jalankan Auto Mapping atau alokasikan manual dulu.');
+        throw new Error('Belum ada nota yang teralokasi ke armada maupun dititip ke Gudang. Jalankan Auto Mapping, alokasikan manual, atau titip ke Gudang dulu.');
       }
       const newCode = await sendManifestSnapshot(payload);
       const url = pickerUrl(newCode);
@@ -74,7 +74,8 @@ export default function SendToOperatorModal({ onClose, drivers, assignments, ord
         {status === 'idle' || status === 'error' ? (
           <div className="space-y-3">
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Ini akan mengunci manifest saat ini ({totalStopsToSend} armada dengan muatan, tanggal{' '}
+              Ini akan mengunci manifest saat ini ({totalStopsToSend} armada dengan muatan
+              {gudangIds.length > 0 ? `, plus ${gudangIds.length} nota titipan Gudang` : ''}, tanggal{' '}
               <strong className="text-slate-700 dark:text-slate-200">{selectedDate}</strong>) jadi tautan yang bisa dibuka
               operator gudang lewat HP masing-masing untuk menyiapkan barang. Perubahan alokasi setelah ini{' '}
               <strong>tidak otomatis ikut terkirim</strong> &mdash; kirim ulang kalau ada perubahan.

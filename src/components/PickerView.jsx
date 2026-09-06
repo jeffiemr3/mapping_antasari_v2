@@ -10,6 +10,7 @@ import {
   ListChecks,
   Clock,
   Boxes,
+  Factory,
 } from 'lucide-react';
 import { fetchManifestSnapshot } from '../utils/pickerSync';
 
@@ -330,7 +331,7 @@ export default function PickerView({ code }) {
                     : 'bg-white dark:bg-[#1c1d26] border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300'
                 }`}
               >
-                <Truck className="w-3 h-3" />
+                {v.isGudang ? <Factory className="w-3 h-3" /> : <Truck className="w-3 h-3" />}
                 {v.vehicle}
                 <span className={i === activeVehicleIdx ? 'text-indigo-200' : 'text-slate-400'}>({v.stopCount})</span>
               </button>
@@ -345,9 +346,11 @@ export default function PickerView({ code }) {
             <div className="rounded-2xl bg-white dark:bg-[#111218] border border-slate-200 dark:border-white/5 p-3 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-900 dark:text-white">
-                  {vehicle.vehicle} &bull; {vehicle.plate}
+                  {vehicle.isGudang ? vehicle.vehicle : `${vehicle.vehicle} \u2022 ${vehicle.plate}`}
                 </p>
-                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Supir: {vehicle.driver}</p>
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  {vehicle.isGudang ? 'Titip di gudang / kasir, pelanggan ambil sendiri' : `Supir: ${vehicle.driver}`}
+                </p>
               </div>
               <div className="flex rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden text-[10.5px] font-bold shrink-0">
                 <button
