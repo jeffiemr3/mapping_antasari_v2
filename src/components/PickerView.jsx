@@ -87,6 +87,7 @@ function LocationBadges({ locations }) {
           <MapPin className="w-3 h-3" />
           {loc.storageLocationId}
           {loc.zoneId ? ` · ${loc.zoneId}` : ''}
+          {loc.qty != null ? ` (${loc.qty % 1 === 0 ? loc.qty : loc.qty.toFixed(1)})` : ''}
         </span>
       ))}
     </div>
