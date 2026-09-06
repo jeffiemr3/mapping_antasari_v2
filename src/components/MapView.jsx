@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { Factory } from 'lucide-react';
+import { Factory, ArrowLeftRight, Check } from 'lucide-react';
 import { ROUTE_COLORS } from '../data/constants';
 
 export default function MapView({
@@ -12,11 +12,34 @@ export default function MapView({
   onFocusVehicle,
   onEditOrder,
   onReorderStop,
+  onMoveVehicleToIndex,
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const routeLayerRef = useRef(null);
   const markerLayerRef = useRef(null);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [pickedIdx, setPickedIdx] = useState(null);
+
+  function handleChipClick(idx) {
+    if (!reorderMode) {
+      onFocusVehicle(focusedVehicleIdx === idx ? null : idx);
+      return;
+    }
+    if (pickedIdx === null) {
+      setPickedIdx(idx);
+    } else if (pickedIdx === idx) {
+      setPickedIdx(null);
+    } else {
+      onMoveVehicleToIndex(pickedIdx, idx);
+      setPickedIdx(null);
+    }
+  }
+
+  function toggleReorderMode() {
+    setReorderMode((m) => !m);
+    setPickedIdx(null);
+  }
 
   // Inisialisasi peta sekali saja
   useEffect(() => {
@@ -119,21 +142,48 @@ export default function MapView({
 
   return (
     <div className="flex flex-col h-full gap-2">
+      {drivers.length > 1 && (
+        <div className="flex items-center justify-between no-print">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+            {reorderMode
+              ? pickedIdx === null
+                ? 'Klik satu tombol armada untuk dipindah...'
+                : 'Sekarang klik tombol tujuan (posisi baru).'
+              : ''}
+          </p>
+          <button
+            onClick={toggleReorderMode}
+            className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg border cursor-pointer shrink-0 ${
+              reorderMode
+                ? 'bg-teal-600 border-teal-600 text-white'
+                : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-[#1c1d26]'
+            }`}
+            title="Atur ulang urutan tombol armada (mis. taruh yang berangkat hari ini di depan)"
+          >
+            {reorderMode ? <Check className="w-3 h-3" /> : <ArrowLeftRight className="w-3 h-3" />}
+            {reorderMode ? 'Selesai' : 'Atur Urutan'}
+          </button>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-1.5 no-print">
         {drivers.map((v, idx) => {
           const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
           const active = focusedVehicleIdx === idx;
+          const picked = reorderMode && pickedIdx === idx;
           return (
             <button
               key={idx}
-              onClick={() => onFocusVehicle(active ? null : idx)}
+              onClick={() => handleChipClick(idx)}
               className={`flex items-center gap-1.5 text-[10.5px] font-semibold px-2.5 py-1 rounded-full border cursor-pointer transition-colors ${
-                active
-                  ? 'border-transparent text-white'
-                  : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1c1d26]'
+                picked
+                  ? 'border-amber-400 ring-2 ring-amber-300 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                  : active
+                    ? 'border-transparent text-white'
+                    : 'border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1c1d26]'
               }`}
-              style={active ? { backgroundColor: color } : undefined}
+              style={!picked && active ? { backgroundColor: color } : undefined}
             >
+              {reorderMode && <span className="font-mono text-[9px] opacity-60">{idx + 1}.</span>}
               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
               {v.vehicle}
             </button>

@@ -202,6 +202,27 @@ export default function App() {
     }));
   }
 
+  /** Pindahkan tombol filter armada ke posisi urutan lain (dipakai mode "Atur Urutan" di peta). */
+  function handleMoveVehicleToIndex(fromIdx, toIdx) {
+    if (fromIdx === toIdx) return;
+    setDispatch((d) => {
+      const drivers = [...d.drivers];
+      const assignments = [...d.assignments];
+      const [movedDriver] = drivers.splice(fromIdx, 1);
+      const [movedAssignment] = assignments.splice(fromIdx, 1);
+      drivers.splice(toIdx, 0, movedDriver);
+      assignments.splice(toIdx, 0, movedAssignment);
+      return { ...d, drivers, assignments };
+    });
+    setFocusedVehicleIdx((f) => {
+      if (f === null) return f;
+      if (f === fromIdx) return toIdx;
+      if (fromIdx < toIdx && f > fromIdx && f <= toIdx) return f - 1;
+      if (fromIdx > toIdx && f >= toIdx && f < fromIdx) return f + 1;
+      return f;
+    });
+  }
+
   function handleSplitOrder(quantities) {
     const npno = splitNotaId;
     if (!npno) return;
@@ -337,6 +358,7 @@ export default function App() {
                   setEditingOrder({ id, vehicleIdx, stopIdx, totalStops })
                 }
                 onReorderStop={handleReorderStop}
+                onMoveVehicleToIndex={handleMoveVehicleToIndex}
               />
             </div>
           </div>
