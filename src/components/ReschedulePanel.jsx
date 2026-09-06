@@ -76,7 +76,7 @@ export default function ReschedulePanel({ rawLines, onRawLinesChange, ordersMap 
 
       {open && (
         <div className="mt-3 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Nomor Nota (NPno)</label>
               <input
@@ -98,7 +98,7 @@ export default function ReschedulePanel({ rawLines, onRawLinesChange, ordersMap 
           </div>
 
           {npno.trim() && !npnoExists && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Nama Pelanggan (baru)</label>
                 <input

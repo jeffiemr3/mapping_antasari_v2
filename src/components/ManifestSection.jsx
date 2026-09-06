@@ -4,6 +4,144 @@ import { ROUTE_COLORS } from '../data/constants';
 import { clusterOrders } from '../utils/allocation';
 import SendToOperatorModal from './SendToOperatorModal';
 
+function StopCard({ stop, stopIdx, totalStops, ordersMap, color, vehicleIndex, allVehicles, onMoveStop, onRemoveStop }) {
+  const members = stop.members;
+  const primary = ordersMap[members[0]];
+  if (!primary) return null;
+  const loadOrder = totalStops - stopIdx;
+  const isMultiNota = members.length > 1;
+
+  const mergedComments = [];
+  members.forEach((id) => {
+    (ordersMap[id]?.comments || []).forEach((c) => {
+      if (!mergedComments.includes(c)) mergedComments.push(c);
+    });
+  });
+  const anyPriority = members.some((id) => ordersMap[id]?.priorityRit1);
+  const stopWeight = members.reduce((sum, id) => sum + (ordersMap[id]?.totalWeightKg || 0), 0);
+  const stopCubage = members.reduce((sum, id) => sum + (ordersMap[id]?.totalCubageM3 || 0), 0);
+
+  function handleSelectChange(e) {
+    const value = e.target.value;
+    members.forEach((id) => {
+      if (value === 'REMOVE') onRemoveStop(id, vehicleIndex);
+      else onMoveStop(id, vehicleIndex, parseInt(value, 10));
+    });
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#111218] p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className="w-6 h-6 rounded-full text-white font-mono font-bold text-[11px] flex items-center justify-center shrink-0"
+            style={{ backgroundColor: color }}
+          >
+            {stopIdx + 1}
+          </span>
+          <div className="min-w-0">
+            <p className="font-bold text-sm text-slate-900 dark:text-white leading-tight truncate">{primary.customer}</p>
+            <p className="text-[10.5px] text-slate-500 dark:text-slate-400 leading-snug">
+              {primary.address} {primary.address2 ? `(${primary.address2})` : ''}
+            </p>
+          </div>
+        </div>
+        <span className="text-[10px] font-mono text-slate-400 shrink-0">
+          Muat ke-<strong>{loadOrder}</strong>
+        </span>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {isMultiNota
+          ? members.map((id) => (
+              <span
+                key={id}
+                className="text-[9.5px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 dark:bg-[#1c1d26] rounded text-slate-700 dark:text-slate-200"
+              >
+                {id}
+              </span>
+            ))
+          : (
+              <span className="text-[9.5px] font-mono font-bold px-1.5 py-0.5 bg-slate-100 dark:bg-[#1c1d26] rounded text-slate-700 dark:text-slate-200">
+                {members[0]}
+              </span>
+            )}
+        {isMultiNota && (
+          <span className="text-[9px] px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 rounded font-bold border border-indigo-200 dark:border-indigo-500/20">
+            &#128230; {members.length} NOTA - 1 DROP
+          </span>
+        )}
+        {anyPriority && (
+          <span className="text-[9px] px-1.5 py-0.5 bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400 rounded font-bold border border-red-200 dark:border-red-500/20">
+            &#9200; PRIORITAS RIT 1
+          </span>
+        )}
+        {primary.phone && (
+          <a
+            href={`tel:${primary.phone}`}
+            className="text-[9.5px] px-1.5 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded font-mono font-semibold border border-emerald-200 dark:border-emerald-500/20"
+          >
+            &#9742; {primary.phone}
+          </a>
+        )}
+      </div>
+
+      {mergedComments.length > 0 && (
+        <p className="text-[10px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg px-2 py-1">
+          &#128172; {mergedComments.join(' / ')}
+        </p>
+      )}
+
+      <ul className="divide-y divide-slate-100 dark:divide-white/5">
+        {members.map((id) => {
+          const order = ordersMap[id];
+          if (!order) return null;
+          return order.lines.map((line, li) => (
+            <li key={`${id}-${li}`} className="py-1 flex items-start justify-between gap-2 text-[11px]">
+              <span className="text-slate-700 dark:text-slate-200 min-w-0">
+                {line.itemName}
+                {line.weightSource === 'sizeEstimate' && (
+                  <span className="ml-1 text-[8px] px-1 py-0.5 bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-500/20">
+                    &#8776; estimasi
+                  </span>
+                )}
+                {line.missing && (
+                  <span className="ml-1 text-[8px] px-1 py-0.5 bg-rose-100 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 rounded border border-rose-200 dark:border-rose-500/20">
+                    &#9888; berat n/a
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 font-mono font-bold text-slate-900 dark:text-white">
+                {line.qty} {line.uom}
+              </span>
+            </li>
+          ));
+        })}
+      </ul>
+
+      <div className="flex items-center justify-between gap-2 pt-1">
+        <span className="text-[10px] font-mono font-semibold text-slate-500 dark:text-slate-400">
+          &#9878; {stopWeight.toFixed(1)} kg &middot; {stopCubage.toFixed(3)} m&sup3;
+        </span>
+        <select
+          value={vehicleIndex}
+          onChange={handleSelectChange}
+          className="text-[11px] border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1d26] text-slate-700 dark:text-white py-1.5 px-2 rounded-lg cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-500"
+        >
+          {allVehicles.map((v, vi) => (
+            <option key={vi} value={vi}>
+              &#128666; {v.vehicle}
+            </option>
+          ))}
+          <option value="REMOVE" className="text-rose-600">
+            &#128465;&#65039; Keluarkan (Reschedule)
+          </option>
+        </select>
+      </div>
+    </div>
+  );
+}
+
 function StopRow({ stop, stopIdx, totalStops, ordersMap, color, vehicleIndex, allVehicles, onMoveStop, onRemoveStop }) {
   const members = stop.members;
   const primary = ordersMap[members[0]];
@@ -219,7 +357,7 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-white/5 print:border-0 print:rounded-none print:overflow-visible">
+      <div className="hidden md:block print:block overflow-x-auto rounded-xl border border-slate-200 dark:border-white/5 print:border-0 print:rounded-none print:overflow-visible">
         <table className="w-full text-xs print:text-[9.5px] text-slate-700 dark:text-slate-300 border-collapse table-auto print:table-fixed">
           <colgroup className="hidden print:table-column-group">
             <col className="print:w-[7%]" />
@@ -259,6 +397,30 @@ function VehicleManifest({ vehicle, vehicleIndex, assignedIds, ordersMap, allVeh
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Versi kartu untuk layar sempit (HP) -- tidak perlu geser tabel */}
+      <div className="md:hidden print:hidden space-y-2">
+        {stops.length === 0 ? (
+          <p className="p-4 text-center text-xs text-slate-400 italic rounded-xl border border-dashed border-slate-200 dark:border-white/10">
+            Belum ada pengiriman dialokasikan ke armada ini.
+          </p>
+        ) : (
+          stops.map((stop, stopIdx) => (
+            <StopCard
+              key={stop.members.join(',')}
+              stop={stop}
+              stopIdx={stopIdx}
+              totalStops={stops.length}
+              ordersMap={ordersMap}
+              color={color}
+              vehicleIndex={vehicleIndex}
+              allVehicles={allVehicles}
+              onMoveStop={onMoveStop}
+              onRemoveStop={onRemoveStop}
+            />
+          ))
+        )}
       </div>
 
       {/* Tanda tangan, cetak saja */}
@@ -307,11 +469,11 @@ export default function ManifestSection({
             Urutan Ke-N merupakan petunjuk rute. Barang stop terakhir dimuat paling belakang (LIFO).
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setSendModalOpen(true)}
             disabled={totalAssigned === 0}
-            className="bg-white dark:bg-[#111218] hover:bg-slate-50 dark:hover:bg-[#1c1d26] disabled:opacity-50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+            className="flex-1 sm:flex-none bg-white dark:bg-[#111218] hover:bg-slate-50 dark:hover:bg-[#1c1d26] disabled:opacity-50 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
           >
             <Send className="w-4 h-4 text-indigo-500" />
             Kirim ke Operator
@@ -319,10 +481,11 @@ export default function ManifestSection({
           <button
             onClick={() => window.print()}
             disabled={totalAssigned === 0}
-            className="bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+            className="flex-1 sm:flex-none bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
           >
             <Printer className="w-4 h-4" />
-            Cetak Semua Rute (Ramping &amp; Hemat Kertas)
+            <span className="hidden sm:inline">Cetak Semua Rute (Ramping &amp; Hemat Kertas)</span>
+            <span className="sm:hidden">Cetak Semua Rute</span>
           </button>
         </div>
       </div>

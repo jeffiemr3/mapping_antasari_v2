@@ -91,7 +91,7 @@ export default function SizeWeightModal({ onClose, rows, onRowsChange }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end bg-slate-50 dark:bg-[#151720] rounded-xl p-3">
+        <div className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end bg-slate-50 dark:bg-[#151720] rounded-xl p-3">
           <div className="space-y-1">
             <label className="text-[9.5px] uppercase tracking-wider text-slate-400 font-bold">Ukuran (misal: 70X70)</label>
             <input

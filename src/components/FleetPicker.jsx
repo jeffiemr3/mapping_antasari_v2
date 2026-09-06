@@ -17,11 +17,11 @@ export default function FleetPicker({ fleetRows, activeFleetKeys, onActiveFleetK
 
   return (
     <div className="bg-white dark:bg-[#111218] border border-slate-200 dark:border-white/5 rounded-2xl p-4 space-y-3 no-print">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">
           Pilih Armada &amp; Supir yang Digunakan ({activeFleetKeys.size}/{fleetRows.length})
         </p>
-        <div className="flex items-center gap-3 text-[11px] font-semibold">
+        <div className="flex items-center gap-3 text-[11px] font-semibold shrink-0">
           <button onClick={selectAll} className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">
             Pilih Semua
           </button>

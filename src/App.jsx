@@ -342,11 +342,11 @@ export default function App() {
         {geocodeError && <p className="text-xs text-rose-500 no-print">{geocodeError}</p>}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start">
-          <div className="bg-white dark:bg-[#111218] border border-slate-200 dark:border-white/5 rounded-2xl p-3 no-print" style={{ height: 480 }}>
-            <h4 className="font-display font-bold text-xs text-slate-900 dark:text-white mb-2 px-1">
+          <div className="bg-white dark:bg-[#111218] border border-slate-200 dark:border-white/5 rounded-2xl p-3 no-print flex flex-col h-[430px] sm:h-[480px] lg:h-[560px]">
+            <h4 className="font-display font-bold text-xs text-slate-900 dark:text-white mb-2 px-1 shrink-0">
               🗺️ Peta Jalur Rute Pengiriman
             </h4>
-            <div style={{ height: 'calc(100% - 24px)' }}>
+            <div className="flex-1 min-h-0">
               <MapView
                 drivers={dispatch.drivers}
                 assignments={dispatch.assignments}

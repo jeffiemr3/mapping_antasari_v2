@@ -141,9 +141,9 @@ export default function MapView({
   }, [assignments, ordersMap, warehouse, focusedVehicleIdx, onEditOrder, onReorderStop]);
 
   return (
-    <div className="flex flex-col h-full gap-2">
+    <div className="flex flex-col h-full gap-1.5">
       {drivers.length > 1 && (
-        <div className="flex items-center justify-between no-print">
+        <div className="flex items-center justify-between no-print shrink-0">
           <p className="text-[10px] text-slate-500 dark:text-slate-400">
             {reorderMode
               ? pickedIdx === null
@@ -165,7 +165,7 @@ export default function MapView({
           </button>
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-1.5 no-print">
+      <div className="flex flex-wrap items-center gap-1.5 no-print shrink-0 max-h-24 overflow-y-auto">
         {drivers.map((v, idx) => {
           const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
           const active = focusedVehicleIdx === idx;
@@ -194,7 +194,7 @@ export default function MapView({
           Gudang
         </span>
       </div>
-      <div ref={containerRef} className="w-full flex-1 rounded-2xl overflow-hidden" style={{ minHeight: 380 }} />
+      <div ref={containerRef} className="w-full flex-1 min-h-0 rounded-2xl overflow-hidden" />
     </div>
   );
 }
