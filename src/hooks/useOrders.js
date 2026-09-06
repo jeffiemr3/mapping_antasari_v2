@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { aggregateOrderLines } from '../utils/excelImport';
+import { applyOrderOverrides } from '../utils/orderOverrides';
 import { buildSizeWeightMap } from '../utils/sizeWeight';
 import { parseDDMMYYYY } from '../utils/format';
 import defaultCatalog from '../data/productCatalog.json';
@@ -8,16 +9,18 @@ import defaultCatalog from '../data/productCatalog.json';
  * Gabungkan baris nota mentah + katalog produk (default + kustom) + tabel
  * Master Tambahan (cadangan berat per ukuran) menjadi peta order teragregasi
  * per NPno, dan daftar NPno yang relevan untuk tanggal yang dipilih (mode
- * kumulatif atau tanggal persis).
+ * kumulatif atau tanggal persis). Koreksi manual dispatcher (`overrides`,
+ * dari popup peta) diterapkan paling akhir supaya selalu jadi sumber
+ * kebenaran terkini tanpa mengubah data mentah.
  */
-export function useOrders({ rawLines, customCatalog, sizeWeightRows, selectedDate, cumulativeMode }) {
+export function useOrders({ rawLines, customCatalog, sizeWeightRows, selectedDate, cumulativeMode, overrides }) {
   const catalog = useMemo(() => ({ ...defaultCatalog, ...customCatalog }), [customCatalog]);
   const sizeWeightMap = useMemo(() => buildSizeWeightMap(sizeWeightRows), [sizeWeightRows]);
 
-  const ordersMap = useMemo(
-    () => aggregateOrderLines(rawLines, catalog, sizeWeightMap),
-    [rawLines, catalog, sizeWeightMap]
-  );
+  const ordersMap = useMemo(() => {
+    const base = aggregateOrderLines(rawLines, catalog, sizeWeightMap);
+    return applyOrderOverrides(base, overrides);
+  }, [rawLines, catalog, sizeWeightMap, overrides]);
 
   const orderIdsForDate = useMemo(() => {
     if (!selectedDate) return [];

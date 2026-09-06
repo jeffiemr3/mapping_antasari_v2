@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   ALLOCATIONS: 'm10_allocations',
   WAREHOUSE: 'm10_warehouse',
   WAREHOUSE_LOCATIONS: 'm10_warehouse_locations',
+  ORDER_OVERRIDES: 'm10_order_overrides',
 };
 
 export function loadJSON(key, fallback) {

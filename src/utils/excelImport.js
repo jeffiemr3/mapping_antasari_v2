@@ -203,6 +203,8 @@ export function aggregateOrderLines(lines, catalog, sizeWeightMap = {}) {
       uom: line.UOM,
       weightKg,
       cubageM3,
+      unitWeightKg: qty > 0 ? weightKg / qty : 0,
+      unitCubageM3: qty > 0 ? cubageM3 / qty : 0,
       missing: weightSource === 'unknown',
       weightSource,
       comment,

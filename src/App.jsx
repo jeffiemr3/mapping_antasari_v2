@@ -14,6 +14,7 @@ import ManifestSection from './components/ManifestSection';
 import SettingsModal from './components/SettingsModal';
 import SizeWeightModal from './components/SizeWeightModal';
 import SplitNotaModal from './components/SplitNotaModal';
+import EditStopModal from './components/EditStopModal';
 import Footer from './components/Footer';
 
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -42,6 +43,7 @@ export default function App() {
   const [warehouse, setWarehouse] = useLocalStorage(STORAGE_KEYS.WAREHOUSE, DEFAULT_WAREHOUSE);
   const [warehouseLocations, setWarehouseLocations] = useLocalStorage(STORAGE_KEYS.WAREHOUSE_LOCATIONS, null);
   const [dispatch, setDispatch] = useLocalStorage(STORAGE_KEYS.ALLOCATIONS, EMPTY_DISPATCH);
+  const [orderOverrides, setOrderOverrides] = useLocalStorage(STORAGE_KEYS.ORDER_OVERRIDES, {});
 
   // ---- Pengaturan tampilan (persisten) ------------------------------------
   const [selectedDate, setSelectedDate] = useLocalStorage('m10_selected_date', toDDMMYYYY(new Date()));
@@ -57,6 +59,7 @@ export default function App() {
   const [splitNotaId, setSplitNotaId] = useState(null);
   const [geocodingId, setGeocodingId] = useState(null);
   const [geocodeError, setGeocodeError] = useState(null);
+  const [editingOrder, setEditingOrder] = useState(null); // { id, vehicleIdx }
 
   const activeFleetKeys = useMemo(
     () => new Set(activeFleetKeysArray ?? fleetRows.map(fleetRowKey)),
@@ -72,6 +75,7 @@ export default function App() {
     sizeWeightRows,
     selectedDate,
     cumulativeMode,
+    overrides: orderOverrides,
   });
 
   const allAssignedIds = useMemo(() => new Set(dispatch.assignments.flat()), [dispatch.assignments]);
@@ -153,6 +157,14 @@ export default function App() {
       ...d,
       assignments: d.assignments.map((arr, i) => (i === fromIdx ? arr.filter((id) => id !== orderId) : arr)),
       unallocated: d.unallocated.includes(orderId) ? d.unallocated : [...d.unallocated, orderId],
+    }));
+  }
+
+  /** Simpan koreksi manual (nama pelanggan / nama barang / qty) dari popup peta. */
+  function handleSaveOrderEdit(npno, { customer, lines }) {
+    setOrderOverrides((prev) => ({
+      ...prev,
+      [npno]: { customer, lines },
     }));
   }
 
@@ -287,6 +299,7 @@ export default function App() {
                 warehouse={warehouse}
                 focusedVehicleIdx={focusedVehicleIdx}
                 onFocusVehicle={setFocusedVehicleIdx}
+                onEditOrder={(id, vehicleIdx) => setEditingOrder({ id, vehicleIdx })}
               />
             </div>
           </div>
@@ -328,6 +341,16 @@ export default function App() {
       )}
       {splitNotaId && ordersMap[splitNotaId] && (
         <SplitNotaModal order={ordersMap[splitNotaId]} onClose={() => setSplitNotaId(null)} onConfirm={handleSplitOrder} />
+      )}
+      {editingOrder && ordersMap[editingOrder.id] && (
+        <EditStopModal
+          order={ordersMap[editingOrder.id]}
+          vehicles={dispatch.drivers}
+          currentVehicleIdx={editingOrder.vehicleIdx}
+          onClose={() => setEditingOrder(null)}
+          onSave={handleSaveOrderEdit}
+          onMoveVehicle={handleMoveStop}
+        />
       )}
     </div>
   );
