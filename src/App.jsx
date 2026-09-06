@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Settings, Truck } from 'lucide-react';
+import { PlusCircle, Truck } from 'lucide-react';
 
 import Header from './components/Header';
 import Toolbar from './components/Toolbar';
@@ -12,6 +12,7 @@ import ReschedulePanel from './components/ReschedulePanel';
 import MapView from './components/MapView';
 import ManifestSection from './components/ManifestSection';
 import SettingsModal from './components/SettingsModal';
+import AddVehicleModal from './components/AddVehicleModal';
 import SizeWeightModal from './components/SizeWeightModal';
 import SplitNotaModal from './components/SplitNotaModal';
 import EditStopModal from './components/EditStopModal';
@@ -55,6 +56,7 @@ export default function App() {
   // ---- State transien (tidak perlu disimpan) ------------------------------
   const [focusedVehicleIdx, setFocusedVehicleIdx] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [addVehicleOpen, setAddVehicleOpen] = useState(false);
   const [sizeWeightOpen, setSizeWeightOpen] = useState(false);
   const [splitNotaId, setSplitNotaId] = useState(null);
   const [geocodingId, setGeocodingId] = useState(null);
@@ -158,6 +160,15 @@ export default function App() {
       assignments: d.assignments.map((arr, i) => (i === fromIdx ? arr.filter((id) => id !== orderId) : arr)),
       unallocated: d.unallocated.includes(orderId) ? d.unallocated : [...d.unallocated, orderId],
     }));
+  }
+
+  /** Tambah satu armada baru (dari tombol "+ Tambah Armada"). Otomatis diaktifkan
+   * kalau sebelumnya user sudah pernah menyunting pilihan armada aktif secara manual. */
+  function handleAddVehicle(newRow) {
+    setFleetRows([...fleetRows, newRow]);
+    if (activeFleetKeysArray !== null) {
+      setActiveFleetKeysArray([...activeFleetKeysArray, fleetRowKey(newRow)]);
+    }
   }
 
   /** Simpan koreksi manual (nama pelanggan / nama barang / qty) dari popup peta. */
@@ -288,11 +299,11 @@ export default function App() {
             <FleetPicker fleetRows={fleetRows} activeFleetKeys={activeFleetKeys} onActiveFleetKeysChange={setActiveFleetKeys} />
           </div>
           <button
-            onClick={() => setSettingsOpen(true)}
-            title="Pengaturan lanjutan (API key & import armada)"
-            className="no-print shrink-0 p-3 rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#111218] text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+            onClick={() => setAddVehicleOpen(true)}
+            title="Tambah armada baru (L300 / NKEL)"
+            className="no-print shrink-0 p-3 rounded-2xl border border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-500/20 cursor-pointer"
           >
-            <Settings className="w-4 h-4" />
+            <PlusCircle className="w-4 h-4" />
           </button>
         </div>
 
@@ -394,6 +405,17 @@ export default function App() {
 
       {settingsOpen && (
         <SettingsModal onClose={() => setSettingsOpen(false)} fleetRows={fleetRows} onFleetChange={setFleetRows} />
+      )}
+      {addVehicleOpen && (
+        <AddVehicleModal
+          fleetRows={fleetRows}
+          onAddVehicle={handleAddVehicle}
+          onClose={() => setAddVehicleOpen(false)}
+          onOpenAdvancedSettings={() => {
+            setAddVehicleOpen(false);
+            setSettingsOpen(true);
+          }}
+        />
       )}
       {sizeWeightOpen && (
         <SizeWeightModal onClose={() => setSizeWeightOpen(false)} rows={sizeWeightRows} onRowsChange={setSizeWeightRows} />
