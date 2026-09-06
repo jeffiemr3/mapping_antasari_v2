@@ -1,7 +1,7 @@
-import { MapPinned } from 'lucide-react';
+import { MapPinned, Trash2 } from 'lucide-react';
 import { ROUTE_COLORS } from '../data/constants';
 
-export default function FleetOverviewCard({ vehicle, vehicleIndex, assignedIds, ordersMap, isFocused, onToggleFocus }) {
+export default function FleetOverviewCard({ vehicle, vehicleIndex, assignedIds, ordersMap, isFocused, onToggleFocus, onRemove }) {
   const totalWeight = assignedIds.reduce((sum, id) => sum + (ordersMap[id]?.totalWeightKg || 0), 0);
   const totalCubage = assignedIds.reduce((sum, id) => sum + (ordersMap[id]?.totalCubageM3 || 0), 0);
   const weightPct = vehicle.capWeightKg > 0 ? Math.min(100, (totalWeight / vehicle.capWeightKg) * 100) : 0;
@@ -9,30 +9,46 @@ export default function FleetOverviewCard({ vehicle, vehicleIndex, assignedIds, 
   const loadPct = Math.max(weightPct, cubagePct);
   const color = ROUTE_COLORS[vehicleIndex % ROUTE_COLORS.length];
 
+  function handleRemove(e) {
+    e.stopPropagation();
+    if (assignedIds.length > 0 && !confirm(`Hapus ${vehicle.vehicle}? ${assignedIds.length} nota yang sudah dialokasikan akan kembali ke "Belum Teralokasi".`)) {
+      return;
+    }
+    onRemove();
+  }
+
   return (
-    <button
-      onClick={onToggleFocus}
+    <div
       style={{ borderLeftColor: color, borderLeftWidth: 4 }}
-      className={`text-left bg-white dark:bg-[#111218] border rounded-2xl p-3.5 space-y-2 cursor-pointer transition-shadow ${
+      className={`bg-white dark:bg-[#111218] border rounded-2xl p-3.5 space-y-2 transition-shadow ${
         isFocused ? 'ring-2 ring-blue-400' : ''
       } border-slate-200 dark:border-white/5`}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="font-display font-bold text-xs text-slate-900 dark:text-white">{vehicle.vehicle}</p>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+      <div onClick={onToggleFocus} className="flex items-start justify-between gap-2 cursor-pointer">
+        <div className="min-w-0">
+          <p className="font-display font-bold text-xs text-slate-900 dark:text-white truncate">{vehicle.vehicle}</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
             {vehicle.plate} &middot; {vehicle.driver}
           </p>
         </div>
-        <div className="text-right shrink-0">
-          <p className="font-display font-bold text-sm" style={{ color }}>
-            {loadPct.toFixed(0)}%
-          </p>
-          <p className="text-[8px] uppercase tracking-wider text-slate-400 font-bold leading-none">Muatan</p>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="text-right">
+            <p className="font-display font-bold text-sm" style={{ color }}>
+              {loadPct.toFixed(0)}%
+            </p>
+            <p className="text-[8px] uppercase tracking-wider text-slate-400 font-bold leading-none">Muatan</p>
+          </div>
+          <button
+            onClick={handleRemove}
+            title="Hapus armada ini dari rute hari ini"
+            className="p-1 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
-      <div className="space-y-1">
+      <div onClick={onToggleFocus} className="space-y-1 cursor-pointer">
         <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
           <span>Beban Berat:</span>
           <span>
@@ -53,10 +69,10 @@ export default function FleetOverviewCard({ vehicle, vehicleIndex, assignedIds, 
         </div>
       </div>
 
-      <p className="text-[10.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-semibold">
+      <p onClick={onToggleFocus} className="text-[10.5px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-semibold cursor-pointer">
         <MapPinned className="w-3 h-3" style={{ color }} />
         {assignedIds.length} Alamat Stop
       </p>
-    </button>
+    </div>
   );
 }

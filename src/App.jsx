@@ -162,6 +162,29 @@ export default function App() {
     }));
   }
 
+  /** Hapus satu armada dari rute hari ini. Nota yang sudah dialokasikan otomatis
+   * kembali ke "Belum Teralokasi" (karena tidak lagi ada di assignments manapun),
+   * dan checklist-nya di panel "Pilih Armada & Supir" ikut tidak tercentang. */
+  function handleRemoveVehicle(vehicleIdx) {
+    const removedVehicle = dispatch.drivers[vehicleIdx];
+    setDispatch((d) => ({
+      ...d,
+      drivers: d.drivers.filter((_, i) => i !== vehicleIdx),
+      assignments: d.assignments.filter((_, i) => i !== vehicleIdx),
+    }));
+    if (removedVehicle) {
+      const next = new Set(activeFleetKeys);
+      next.delete(fleetRowKey(removedVehicle));
+      setActiveFleetKeys(next);
+    }
+    setFocusedVehicleIdx((f) => {
+      if (f === null) return f;
+      if (f === vehicleIdx) return null;
+      if (f > vehicleIdx) return f - 1;
+      return f;
+    });
+  }
+
   /** Tambah satu armada baru (dari tombol "+ Tambah Armada"). Otomatis diaktifkan
    * kalau sebelumnya user sudah pernah menyunting pilihan armada aktif secara manual. */
   function handleAddVehicle(newRow) {
@@ -335,6 +358,7 @@ export default function App() {
                   ordersMap={ordersMap}
                   isFocused={focusedVehicleIdx === idx}
                   onToggleFocus={() => setFocusedVehicleIdx((v) => (v === idx ? null : idx))}
+                  onRemove={() => handleRemoveVehicle(idx)}
                 />
               ))}
             </div>
