@@ -196,6 +196,8 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         onOpenSizeWeight={() => setSizeWeightOpen(true)}
+        warehouseLocations={warehouseLocations}
+        onWarehouseLocationsChange={setWarehouseLocations}
       />
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 space-y-4">
@@ -319,13 +321,7 @@ export default function App() {
       <Footer />
 
       {settingsOpen && (
-        <SettingsModal
-          onClose={() => setSettingsOpen(false)}
-          fleetRows={fleetRows}
-          onFleetChange={setFleetRows}
-          warehouseLocations={warehouseLocations}
-          onWarehouseLocationsChange={setWarehouseLocations}
-        />
+        <SettingsModal onClose={() => setSettingsOpen(false)} fleetRows={fleetRows} onFleetChange={setFleetRows} />
       )}
       {sizeWeightOpen && (
         <SizeWeightModal onClose={() => setSizeWeightOpen(false)} rows={sizeWeightRows} onRowsChange={setSizeWeightRows} />

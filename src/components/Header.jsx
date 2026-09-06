@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Truck, Upload, PackagePlus, Ruler, Moon, Sun } from 'lucide-react';
+import { Truck, Upload, PackagePlus, Ruler, Moon, Sun, MapPinned } from 'lucide-react';
 import {
   parseOrdersExcel,
   parseOrdersCSV,
@@ -7,6 +7,7 @@ import {
   mergeOrderLinesByPromisedDate,
   parseCustomCatalogExcel,
 } from '../utils/excelImport';
+import { parseWarehouseLocationExcel } from '../utils/warehouseLocations';
 
 export default function Header({
   rawLines,
@@ -16,9 +17,12 @@ export default function Header({
   theme,
   onToggleTheme,
   onOpenSizeWeight,
+  warehouseLocations,
+  onWarehouseLocationsChange,
 }) {
   const ordersInputRef = useRef(null);
   const catalogInputRef = useRef(null);
+  const locationInputRef = useRef(null);
 
   async function handleOrdersFile(e) {
     const file = e.target.files?.[0];
@@ -54,6 +58,24 @@ export default function Header({
       }
     } catch (err) {
       alert('Gagal membaca master item: ' + err.message);
+    } finally {
+      e.target.value = '';
+    }
+  }
+
+  async function handleLocationFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const index = parseWarehouseLocationExcel(await file.arrayBuffer());
+      if (!index) {
+        alert("Format Excel tidak cocok. Header 'Storage Location Id' / 'Item No' tidak ditemukan.");
+      } else {
+        onWarehouseLocationsChange(index);
+        alert(`Berhasil memuat lokasi gudang untuk ${Object.keys(index).length} kode barang.`);
+      }
+    } catch (err) {
+      alert('Gagal membaca lokasi gudang: ' + err.message);
     } finally {
       e.target.value = '';
     }
@@ -106,6 +128,19 @@ export default function Header({
         >
           <Ruler className="w-3.5 h-3.5 text-orange-500" />
           Master Tambahan
+        </button>
+
+        <input ref={locationInputRef} type="file" accept=".xlsx,.xls" onChange={handleLocationFile} className="hidden" />
+        <button
+          onClick={() => locationInputRef.current?.click()}
+          title="Import Report Stock Warehouse By Location, supaya tampilan operator gudang tahu rak pengambilan tiap barang"
+          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1c1d26] cursor-pointer"
+        >
+          <MapPinned className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+          Lokasi Gudang
+          {warehouseLocations && (
+            <span className="text-[9px] font-mono text-slate-400">({Object.keys(warehouseLocations).length})</span>
+          )}
         </button>
 
         <button
