@@ -3,7 +3,16 @@ import L from 'leaflet';
 import { Factory } from 'lucide-react';
 import { ROUTE_COLORS } from '../data/constants';
 
-export default function MapView({ drivers, assignments, ordersMap, warehouse, focusedVehicleIdx, onFocusVehicle, onEditOrder }) {
+export default function MapView({
+  drivers,
+  assignments,
+  ordersMap,
+  warehouse,
+  focusedVehicleIdx,
+  onFocusVehicle,
+  onEditOrder,
+  onReorderStop,
+}) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const routeLayerRef = useRef(null);
@@ -72,15 +81,28 @@ export default function MapView({ drivers, assignments, ordersMap, warehouse, fo
           iconAnchor: [14, 14],
         });
         const itemsHtml = order.lines.map((l) => `<li>${l.itemName} (x${l.qty} ${l.uom})</li>`).join('');
+        const totalStops = stopIds.length;
+        const btnStyle =
+          'border:none;padding:5px 8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:#fff;';
+        const orderBtnsHtml = `
+          ${stopIdx > 0 ? `<button class="m10-up-btn" style="${btnStyle}background:#0f766e;" title="Naikkan urutan (jadi lebih awal)">⬆️</button>` : ''}
+          ${stopIdx < totalStops - 1 ? `<button class="m10-down-btn" style="${btnStyle}background:#0f766e;" title="Turunkan urutan (jadi lebih akhir)">⬇️</button>` : ''}
+        `;
         const marker = L.marker([order.lat, order.lng], { icon: stopIcon })
           .bindPopup(
-            `<strong>${stopIdx + 1}. ${order.customer}</strong><br/>${order.address}<br/><ul style="margin:4px 0 0;padding-left:16px">${itemsHtml}</ul><button class="m10-edit-stop-btn" style="margin-top:8px;background:#4f46e5;color:#fff;border:none;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;">✏️ Edit / Pindahkan</button>`
+            `<strong>${stopIdx + 1}. ${order.customer}</strong><br/>${order.address}<br/><ul style="margin:4px 0 0;padding-left:16px">${itemsHtml}</ul><div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">${orderBtnsHtml}<button class="m10-edit-stop-btn" style="${btnStyle}background:#4f46e5;">✏️ Edit / Pindahkan</button></div>`
           )
           .addTo(markerLayer);
-        if (onEditOrder) {
+        if (onEditOrder || onReorderStop) {
           marker.on('popupopen', (e) => {
-            const btn = e.popup.getElement()?.querySelector('.m10-edit-stop-btn');
-            if (btn) btn.onclick = () => onEditOrder(id, vehicleIdx);
+            const el = e.popup.getElement();
+            if (!el) return;
+            const editBtn = el.querySelector('.m10-edit-stop-btn');
+            if (editBtn && onEditOrder) editBtn.onclick = () => onEditOrder(id, vehicleIdx, stopIdx, totalStops);
+            const upBtn = el.querySelector('.m10-up-btn');
+            if (upBtn && onReorderStop) upBtn.onclick = () => onReorderStop(vehicleIdx, id, -1);
+            const downBtn = el.querySelector('.m10-down-btn');
+            if (downBtn && onReorderStop) downBtn.onclick = () => onReorderStop(vehicleIdx, id, 1);
           });
         }
       });
@@ -93,7 +115,7 @@ export default function MapView({ drivers, assignments, ordersMap, warehouse, fo
     if (bounds.length > 1) {
       map.fitBounds(bounds, { padding: [30, 30] });
     }
-  }, [assignments, ordersMap, warehouse, focusedVehicleIdx, onEditOrder]);
+  }, [assignments, ordersMap, warehouse, focusedVehicleIdx, onEditOrder, onReorderStop]);
 
   return (
     <div className="flex flex-col h-full gap-2">

@@ -168,6 +168,40 @@ export default function App() {
     }));
   }
 
+  /** Geser urutan drop satu langkah (naik = lebih awal, turun = lebih akhir) dalam armada yang sama. */
+  function handleReorderStop(vehicleIdx, orderId, direction) {
+    setDispatch((d) => ({
+      ...d,
+      assignments: d.assignments.map((arr, i) => {
+        if (i !== vehicleIdx) return arr;
+        const idx = arr.indexOf(orderId);
+        const newIdx = idx + direction;
+        if (idx === -1 || newIdx < 0 || newIdx >= arr.length) return arr;
+        const next = [...arr];
+        [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
+        return next;
+      }),
+    }));
+  }
+
+  /** Pindahkan drop langsung ke posisi urutan tertentu (0-based) dalam armada yang sama. */
+  function handleSetStopPosition(vehicleIdx, orderId, newIndex) {
+    setDispatch((d) => ({
+      ...d,
+      assignments: d.assignments.map((arr, i) => {
+        if (i !== vehicleIdx) return arr;
+        const idx = arr.indexOf(orderId);
+        if (idx === -1) return arr;
+        const clamped = Math.max(0, Math.min(arr.length - 1, newIndex));
+        if (clamped === idx) return arr;
+        const next = [...arr];
+        next.splice(idx, 1);
+        next.splice(clamped, 0, orderId);
+        return next;
+      }),
+    }));
+  }
+
   function handleSplitOrder(quantities) {
     const npno = splitNotaId;
     if (!npno) return;
@@ -299,7 +333,10 @@ export default function App() {
                 warehouse={warehouse}
                 focusedVehicleIdx={focusedVehicleIdx}
                 onFocusVehicle={setFocusedVehicleIdx}
-                onEditOrder={(id, vehicleIdx) => setEditingOrder({ id, vehicleIdx })}
+                onEditOrder={(id, vehicleIdx, stopIdx, totalStops) =>
+                  setEditingOrder({ id, vehicleIdx, stopIdx, totalStops })
+                }
+                onReorderStop={handleReorderStop}
               />
             </div>
           </div>
@@ -347,9 +384,12 @@ export default function App() {
           order={ordersMap[editingOrder.id]}
           vehicles={dispatch.drivers}
           currentVehicleIdx={editingOrder.vehicleIdx}
+          stopIdx={editingOrder.stopIdx}
+          totalStops={editingOrder.totalStops}
           onClose={() => setEditingOrder(null)}
           onSave={handleSaveOrderEdit}
           onMoveVehicle={handleMoveStop}
+          onSetPosition={handleSetStopPosition}
         />
       )}
     </div>

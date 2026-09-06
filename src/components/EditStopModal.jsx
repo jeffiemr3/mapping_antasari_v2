@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, PencilLine, Truck, Save } from 'lucide-react';
+import { X, PencilLine, Truck, Save, ArrowUpDown } from 'lucide-react';
 
 /**
  * Dipicu dari tombol "Edit / Pindahkan" di popup marker peta. Mengedit nama
@@ -7,10 +7,22 @@ import { X, PencilLine, Truck, Save } from 'lucide-react';
  * data mentah (lihat utils/orderOverrides.js) -- data hasil import tidak
  * pernah ditimpa langsung, supaya tetap bisa ditelusuri ke sumber aslinya.
  */
-export default function EditStopModal({ order, vehicles, currentVehicleIdx, onClose, onSave, onMoveVehicle }) {
+export default function EditStopModal({
+  order,
+  vehicles,
+  currentVehicleIdx,
+  stopIdx,
+  totalStops,
+  onClose,
+  onSave,
+  onMoveVehicle,
+  onSetPosition,
+}) {
   const [customer, setCustomer] = useState(order.customer);
   const [lines, setLines] = useState(() => order.lines.map((l) => ({ itemName: l.itemName, qty: l.qty })));
   const [vehicleIdx, setVehicleIdx] = useState(currentVehicleIdx ?? '');
+  const [position, setPosition] = useState(stopIdx != null ? stopIdx + 1 : '');
+  const vehicleChanged = vehicleIdx !== '' && currentVehicleIdx != null && Number(vehicleIdx) !== currentVehicleIdx;
 
   function updateLine(idx, field, value) {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
@@ -22,8 +34,10 @@ export default function EditStopModal({ order, vehicles, currentVehicleIdx, onCl
       linesOverride[idx] = { itemName: l.itemName, qty: Math.max(0, parseFloat(l.qty) || 0) };
     });
     onSave(order.NPno, { customer, lines: linesOverride });
-    if (vehicleIdx !== '' && currentVehicleIdx != null && Number(vehicleIdx) !== currentVehicleIdx) {
+    if (vehicleChanged) {
       onMoveVehicle(order.NPno, currentVehicleIdx, Number(vehicleIdx));
+    } else if (onSetPosition && totalStops != null && position !== '' && Number(position) - 1 !== stopIdx) {
+      onSetPosition(currentVehicleIdx, order.NPno, Number(position) - 1);
     }
     onClose();
   }
@@ -70,6 +84,33 @@ export default function EditStopModal({ order, vehicles, currentVehicleIdx, onCl
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {totalStops != null && (
+          <div className="space-y-1.5">
+            <label className="text-[10.5px] uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
+              <ArrowUpDown className="w-3.5 h-3.5 text-teal-500" />
+              Urutan Drop Ke-
+            </label>
+            {vehicleChanged ? (
+              <p className="text-[11px] text-slate-500 bg-slate-50 dark:bg-[#151720] rounded-lg p-2">
+                Karena armadanya diganti, drop ini otomatis ditaruh di urutan paling akhir pada armada baru. Atur ulang
+                urutannya nanti lewat popup peta kalau perlu.
+              </p>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max={totalStops}
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
+                  className="w-20 text-center text-sm font-mono font-bold border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1d26] text-slate-900 dark:text-white rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+                <span className="text-[11px] text-slate-500">dari {totalStops} stop di armada ini</span>
+              </div>
+            )}
           </div>
         )}
 
