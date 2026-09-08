@@ -78,7 +78,15 @@ export default function App() {
     Promise.all([loadSharedData('orders'), loadSharedData('warehouseLocations')])
       .then(([ordersResult, locationsResult]) => {
         if (cancelled) return;
-        if (ordersResult?.data) setRawLines(ordersResult.data);
+        if (ordersResult?.data) {
+          // Cuma reset alokasi kalau datanya BEDA dari yang sudah ada di
+          // localStorage device ini - supaya buka/refresh app biasa (data
+          // di Firebase = data lokal, kasus paling umum) tidak menghapus
+          // hasil Auto Mapping yang sedang dikerjakan tanpa alasan.
+          const changed = JSON.stringify(ordersResult.data) !== JSON.stringify(rawLines);
+          setRawLines(ordersResult.data);
+          if (changed) setDispatch(EMPTY_DISPATCH);
+        }
         if (locationsResult?.data) setWarehouseLocations(locationsResult.data);
         setCloudSyncStatus('synced');
       })
@@ -94,6 +102,12 @@ export default function App() {
   /** Dipanggil Header setelah rawLines baru berhasil di-parse dari file upload. */
   async function handleRawLinesUploaded(newRawLines) {
     setRawLines(newRawLines);
+    // Hasil alokasi/manifest lama bisa saja menunjuk ke NPno yang sudah
+    // tidak ada lagi di data baru (mis. tanggal yang sama tapi isi notanya
+    // beda) - kalau dibiarkan, komponen lain yang baca ordersMap[npnoLama]
+    // akan dapat undefined dan bisa crash. Reset alokasi supaya dispatcher
+    // jalankan ulang Auto Mapping dengan data yang sudah pasti sinkron.
+    setDispatch(EMPTY_DISPATCH);
     if (!isFirebaseConfigured) return;
     setCloudSyncStatus('loading');
     try {

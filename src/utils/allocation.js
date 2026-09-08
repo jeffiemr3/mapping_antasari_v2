@@ -73,8 +73,14 @@ export function normalizePhone(phone) {
  * @returns {Array<{members:string[], validMembers:string[], zeroMembers:string[], lat:number|null, lng:number|null, totalWeightKg:number, totalCubageM3:number}>}
  */
 export function clusterOrders(orderIds, ordersMap) {
+  // Saring dulu NPno yang datanya beneran ada di ordersMap - mencegah crash
+  // kalau ada NPno "basi" yang nyangkut di suatu tempat (mis. dispatch/
+  // gudangIds lama) tapi order aslinya sudah tidak ada lagi (dihapus,
+  // diganti tanggal, atau data Penjualan di-upload ulang dengan isi beda).
+  const validOrderIds = orderIds.filter((id) => ordersMap[id]);
+
   const parent = {};
-  orderIds.forEach((id) => (parent[id] = id));
+  validOrderIds.forEach((id) => (parent[id] = id));
 
   function find(x) {
     let root = x;
@@ -95,7 +101,7 @@ export function clusterOrders(orderIds, ordersMap) {
 
   const byName = {};
   const byPhone = {};
-  orderIds.forEach((id) => {
+  validOrderIds.forEach((id) => {
     const order = ordersMap[id];
     const name = normalizeCustomerName(order.customer);
     if (name) {
@@ -110,7 +116,7 @@ export function clusterOrders(orderIds, ordersMap) {
   });
 
   const groups = {};
-  orderIds.forEach((id) => {
+  validOrderIds.forEach((id) => {
     const root = find(id);
     if (!groups[root]) groups[root] = [];
     groups[root].push(id);
