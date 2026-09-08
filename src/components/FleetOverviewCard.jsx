@@ -1,7 +1,17 @@
-import { MapPinned, Trash2 } from 'lucide-react';
+import { MapPinned, Trash2, Lock, LockOpen } from 'lucide-react';
 import { ROUTE_COLORS } from '../data/constants';
 
-export default function FleetOverviewCard({ vehicle, vehicleIndex, assignedIds, ordersMap, isFocused, onToggleFocus, onRemove }) {
+export default function FleetOverviewCard({
+  vehicle,
+  vehicleIndex,
+  assignedIds,
+  ordersMap,
+  isFocused,
+  onToggleFocus,
+  onRemove,
+  isLocked,
+  onToggleLock,
+}) {
   const totalWeight = assignedIds.reduce((sum, id) => sum + (ordersMap[id]?.totalWeightKg || 0), 0);
   const totalCubage = assignedIds.reduce((sum, id) => sum + (ordersMap[id]?.totalCubageM3 || 0), 0);
   const weightPct = vehicle.capWeightKg > 0 ? Math.min(100, (totalWeight / vehicle.capWeightKg) * 100) : 0;
@@ -11,10 +21,19 @@ export default function FleetOverviewCard({ vehicle, vehicleIndex, assignedIds, 
 
   function handleRemove(e) {
     e.stopPropagation();
+    if (isLocked) {
+      alert('Rute ini terkunci 🔒 — buka kunci dulu kalau mau menghapus armada ini.');
+      return;
+    }
     if (assignedIds.length > 0 && !confirm(`Hapus ${vehicle.vehicle}? ${assignedIds.length} nota yang sudah dialokasikan akan kembali ke "Belum Teralokasi".`)) {
       return;
     }
     onRemove();
+  }
+
+  function handleToggleLock(e) {
+    e.stopPropagation();
+    onToggleLock();
   }
 
   return (
@@ -22,11 +41,14 @@ export default function FleetOverviewCard({ vehicle, vehicleIndex, assignedIds, 
       style={{ borderLeftColor: color, borderLeftWidth: 4 }}
       className={`bg-white dark:bg-[#111218] border rounded-2xl p-3.5 space-y-2 transition-shadow ${
         isFocused ? 'ring-2 ring-blue-400' : ''
-      } border-slate-200 dark:border-white/5`}
+      } ${isLocked ? 'border-rose-200 dark:border-rose-500/30' : 'border-slate-200 dark:border-white/5'}`}
     >
       <div onClick={onToggleFocus} className="flex items-start justify-between gap-2 cursor-pointer">
         <div className="min-w-0">
-          <p className="font-display font-bold text-xs text-slate-900 dark:text-white truncate">{vehicle.vehicle}</p>
+          <p className="font-display font-bold text-xs text-slate-900 dark:text-white truncate flex items-center gap-1">
+            {vehicle.vehicle}
+            {isLocked && <Lock className="w-3 h-3 text-rose-500 shrink-0" />}
+          </p>
           <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
             {vehicle.plate} &middot; {vehicle.driver}
           </p>
@@ -38,6 +60,17 @@ export default function FleetOverviewCard({ vehicle, vehicleIndex, assignedIds, 
             </p>
             <p className="text-[8px] uppercase tracking-wider text-slate-400 font-bold leading-none">Muatan</p>
           </div>
+          <button
+            onClick={handleToggleLock}
+            title={isLocked ? 'Buka kunci rute ini' : 'Kunci rute ini (tidak berubah walau Auto Mapping/Reset dijalankan lagi)'}
+            className={`p-1 rounded-lg cursor-pointer ${
+              isLocked
+                ? 'text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-500/10'
+                : 'text-slate-300 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1c1d26]'
+            }`}
+          >
+            {isLocked ? <Lock className="w-3.5 h-3.5" /> : <LockOpen className="w-3.5 h-3.5" />}
+          </button>
           <button
             onClick={handleRemove}
             title="Hapus armada ini dari rute hari ini"

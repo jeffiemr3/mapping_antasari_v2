@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Truck, Lock, LockOpen, Save, CloudDownload } from 'lucide-react';
+import { Truck, Lock, Save, CloudDownload } from 'lucide-react';
 
 import Header from './components/Header';
 import Toolbar from './components/Toolbar';
@@ -34,7 +34,7 @@ import { toDDMMYYYY } from './utils/format';
 import fleetSeed from './data/fleetSeed.json';
 import sizeWeightSeed from './data/sizeWeightSeed.json';
 
-const EMPTY_DISPATCH = { drivers: [], assignments: [], unallocated: [], gudangIds: [], locked: false };
+const EMPTY_DISPATCH = { drivers: [], assignments: [], unallocated: [], gudangIds: [], lockedVehicleKeys: [] };
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -232,42 +232,71 @@ export default function App() {
     return fleetRows.filter((row) => activeFleetKeys.has(fleetRowKey(row)));
   }
 
-  /** Kalau mapping sedang dikunci, tolak semua aksi yang mengubah dispatch
-   * (Auto Mapping, Reset, alokasi manual, pindah/keluarkan stop, dst) supaya
-   * hasil yang sudah di-fix beneran tidak berubah sampai dibuka kuncinya lagi. */
-  function guardLocked() {
-    if (dispatch.locked) {
-      alert('Mapping sedang dikunci 🔒 — buka kunci dulu (tombol di bagian Armada Logistik) kalau mau mengubah alokasi.');
+  /** Cek apakah SATU armada tertentu sedang dikunci (dibandingkan lewat
+   * fleetRowKey supaya tetap akurat walau urutan armada berubah). */
+  function isVehicleLocked(vehicle) {
+    return (dispatch.lockedVehicleKeys || []).includes(fleetRowKey(vehicle));
+  }
+
+  /** Tolak aksi yang menyentuh armada tertentu kalau armada itu terkunci. */
+  function guardVehicleLocked(vehicleIdx) {
+    const vehicle = dispatch.drivers[vehicleIdx];
+    if (vehicle && isVehicleLocked(vehicle)) {
+      alert(`Rute "${vehicle.vehicle}" sedang dikunci 🔒 — buka kunci dulu (ikon gembok di kartu armadanya) kalau mau mengubah.`);
       return true;
     }
     return false;
   }
 
   function handleAutoMapping() {
-    if (guardLocked()) return;
-    const eligible = getEligibleIds();
-    const activeFleet = getActiveFleetRows();
+    const lockedKeys = new Set(dispatch.lockedVehicleKeys || []);
+    const lockedIdx = dispatch.drivers
+      .map((v, i) => (lockedKeys.has(fleetRowKey(v)) ? i : -1))
+      .filter((i) => i !== -1);
+    const lockedVehicles = lockedIdx.map((i) => dispatch.drivers[i]);
+    const lockedAssignments = lockedIdx.map((i) => dispatch.assignments[i] || []);
+    const lockedOrderIds = new Set(lockedAssignments.flat());
+
+    const eligible = getEligibleIds().filter((id) => !lockedOrderIds.has(id));
+    const activeFleet = getActiveFleetRows().filter((r) => !lockedKeys.has(fleetRowKey(r)));
     const result = autoAllocate(eligible, ordersMap, activeFleet, warehouse, maxLoadPercent);
-    setDispatch({ ...result, locked: false });
+
+    // Armada yang terkunci dipertahankan APA ADANYA (posisi & isinya), sisanya
+    // diisi hasil algoritma yang baru - supaya rute yang sudah di-fix tidak
+    // ikut berubah walau Auto Mapping dijalankan ulang untuk armada lain.
+    setDispatch({
+      drivers: [...lockedVehicles, ...result.drivers],
+      assignments: [...lockedAssignments, ...result.assignments],
+      unallocated: result.unallocated,
+      gudangIds: dispatch.gudangIds || [],
+      lockedVehicleKeys: dispatch.lockedVehicleKeys || [],
+    });
     setFocusedVehicleIdx(null);
   }
 
   function handleReset() {
-    if (guardLocked()) return;
-    const eligible = getEligibleIds();
-    const activeFleet = getActiveFleetRows();
+    const lockedKeys = new Set(dispatch.lockedVehicleKeys || []);
+    const lockedIdx = dispatch.drivers
+      .map((v, i) => (lockedKeys.has(fleetRowKey(v)) ? i : -1))
+      .filter((i) => i !== -1);
+    const lockedVehicles = lockedIdx.map((i) => dispatch.drivers[i]);
+    const lockedAssignments = lockedIdx.map((i) => dispatch.assignments[i] || []);
+    const lockedOrderIds = new Set(lockedAssignments.flat());
+
+    const eligible = getEligibleIds().filter((id) => !lockedOrderIds.has(id));
+    const activeFleet = getActiveFleetRows().filter((r) => !lockedKeys.has(fleetRowKey(r)));
     setDispatch({
-      drivers: activeFleet.map((r) => ({ ...r })),
-      assignments: activeFleet.map(() => []),
+      drivers: [...lockedVehicles, ...activeFleet.map((r) => ({ ...r }))],
+      assignments: [...lockedAssignments, ...activeFleet.map(() => [])],
       unallocated: eligible,
-      gudangIds: [],
-      locked: false,
+      gudangIds: dispatch.gudangIds || [],
+      lockedVehicleKeys: dispatch.lockedVehicleKeys || [],
     });
     setFocusedVehicleIdx(null);
   }
 
   function handleManualAllocate(orderId, vehicleIdx) {
-    if (guardLocked()) return;
+    if (guardVehicleLocked(vehicleIdx)) return;
     setDispatch((d) => ({
       ...d,
       assignments: d.assignments.map((arr, i) => (i === vehicleIdx ? [...arr, orderId] : arr)),
@@ -276,7 +305,7 @@ export default function App() {
   }
 
   function handleMoveStop(orderId, fromIdx, toIdx) {
-    if (guardLocked()) return;
+    if (guardVehicleLocked(fromIdx) || guardVehicleLocked(toIdx)) return;
     if (fromIdx === toIdx) return;
     setDispatch((d) => ({
       ...d,
@@ -290,7 +319,7 @@ export default function App() {
 
   /** Keluarkan nota dari rute armada -> kembali ke "Belum Teralokasi" (mis. pelanggan minta reschedule). */
   function handleRemoveStop(orderId, fromIdx) {
-    if (guardLocked()) return;
+    if (guardVehicleLocked(fromIdx)) return;
     setDispatch((d) => ({
       ...d,
       assignments: d.assignments.map((arr, i) => (i === fromIdx ? arr.filter((id) => id !== orderId) : arr)),
@@ -301,7 +330,6 @@ export default function App() {
   /** Titip nota "Amsen" ke Gudang (bukan dikirim pakai armada). Nanti ikut
    * terkirim ke operator sebagai tab "Titipan Gudang" tersendiri. */
   function handleAddToGudang(npno) {
-    if (guardLocked()) return;
     setDispatch((d) => {
       const current = d.gudangIds || [];
       if (current.includes(npno)) return d;
@@ -310,15 +338,30 @@ export default function App() {
   }
 
   function handleRemoveFromGudang(npno) {
-    if (guardLocked()) return;
     setDispatch((d) => ({ ...d, gudangIds: (d.gudangIds || []).filter((id) => id !== npno) }));
+  }
+
+  /** Kunci/buka-kunci SATU armada tertentu. Kalau dikunci: isinya tidak akan
+   * ikut berubah walau Auto Mapping/Reset dijalankan ulang, dan tidak bisa
+   * dipindah/dihapus/ditambah manual sampai dibuka lagi. */
+  function handleToggleVehicleLock(vehicleIdx) {
+    const vehicle = dispatch.drivers[vehicleIdx];
+    if (!vehicle) return;
+    const key = fleetRowKey(vehicle);
+    setDispatch((d) => {
+      const current = d.lockedVehicleKeys || [];
+      const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+      const updated = { ...d, lockedVehicleKeys: next };
+      syncDispatchToFirebase(updated);
+      return updated;
+    });
   }
 
   /** Hapus satu armada dari rute hari ini. Nota yang sudah dialokasikan otomatis
    * kembali ke "Belum Teralokasi" (karena tidak lagi ada di assignments manapun),
    * dan checklist-nya di panel "Pilih Armada & Supir" ikut tidak tercentang. */
   function handleRemoveVehicle(vehicleIdx) {
-    if (guardLocked()) return;
+    if (guardVehicleLocked(vehicleIdx)) return;
     const removedVehicle = dispatch.drivers[vehicleIdx];
     setDispatch((d) => ({
       ...d,
@@ -335,17 +378,6 @@ export default function App() {
       if (f === vehicleIdx) return null;
       if (f > vehicleIdx) return f - 1;
       return f;
-    });
-  }
-
-  /** Kunci/buka-kunci mapping saat ini. Terkunci = Auto Mapping, Reset, dan
-   * semua aksi ubah-alokasi ditolak (lihat guardLocked) sampai dibuka lagi.
-   * Status kunci ikut tersimpan & tersinkron bareng dispatch-nya sendiri. */
-  function handleToggleLock() {
-    setDispatch((d) => {
-      const next = { ...d, locked: !d.locked };
-      syncDispatchToFirebase(next);
-      return next;
     });
   }
 
@@ -483,7 +515,6 @@ export default function App() {
   }
 
   function handleSplitOrder(quantities) {
-    if (guardLocked()) return;
     const npno = splitNotaId;
     if (!npno) return;
     setRawLines((lines) => splitOrderInRawLines(lines, npno, quantities));
@@ -544,7 +575,6 @@ export default function App() {
           onExcludeAmsenChange={setExcludeAmsen}
           onAutoMapping={handleAutoMapping}
           onReset={handleReset}
-          locked={dispatch.locked}
         />
 
         <FleetPicker
@@ -568,10 +598,10 @@ export default function App() {
             <h3 className="font-display font-bold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
               <Truck className="w-4 h-4 text-orange-500" />
               Armada Logistik ({dispatch.drivers.length} Rute Aktif)
-              {dispatch.locked && (
+              {(dispatch.lockedVehicleKeys || []).length > 0 && (
                 <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400">
                   <Lock className="w-3 h-3" />
-                  Terkunci
+                  {dispatch.lockedVehicleKeys.length} Terkunci
                 </span>
               )}
             </h3>
@@ -593,27 +623,8 @@ export default function App() {
                 <Save className="w-3.5 h-3.5" />
                 Simpan
               </button>
-              <button
-                onClick={handleToggleLock}
-                disabled={dispatch.drivers.length === 0}
-                title={dispatch.locked ? 'Buka kunci mapping (izinkan diubah lagi)' : 'Kunci mapping supaya tidak berubah walau Auto Mapping dijalankan lagi'}
-                className={`flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-xl cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                  dispatch.locked
-                    ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                    : 'bg-slate-100 dark:bg-[#1c1d26] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-[#222431]'
-                }`}
-              >
-                {dispatch.locked ? <LockOpen className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-                {dispatch.locked ? 'Buka Kunci' : 'Kunci Mapping'}
-              </button>
             </div>
           </div>
-          {dispatch.locked && (
-            <p className="text-[11px] text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl px-3 py-2">
-              🔒 Mapping ini terkunci — Auto Mapping, Reset, dan semua alokasi manual tidak akan mengubah hasil ini sampai
-              dibuka kuncinya lagi.
-            </p>
-          )}
           {dispatch.drivers.length === 0 ? (
             <p className="text-xs text-slate-500">
               Belum ada armada aktif. Import data nota, pilih tanggal, lalu klik &quot;Auto Mapping&quot;.
@@ -630,6 +641,8 @@ export default function App() {
                   isFocused={focusedVehicleIdx === idx}
                   onToggleFocus={() => setFocusedVehicleIdx((v) => (v === idx ? null : idx))}
                   onRemove={() => handleRemoveVehicle(idx)}
+                  isLocked={isVehicleLocked(vehicle)}
+                  onToggleLock={() => handleToggleVehicleLock(idx)}
                 />
               ))}
             </div>

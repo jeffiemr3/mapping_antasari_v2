@@ -25,7 +25,6 @@ export default function Toolbar({
   onExcludeAmsenChange,
   onAutoMapping,
   onReset,
-  locked,
 }) {
   function handleCoordText(text) {
     const [latStr, lngStr] = text.split(',').map((s) => s.trim());
@@ -91,8 +90,7 @@ export default function Toolbar({
         <div className="flex gap-2 w-full sm:w-auto sm:ml-auto">
           <button
             onClick={onAutoMapping}
-            disabled={!selectedDate || locked}
-            title={locked ? 'Mapping sedang dikunci — buka kunci dulu di bagian Armada Logistik' : undefined}
+            disabled={!selectedDate}
             className="flex-1 sm:flex-none bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 shadow transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
           >
             <Zap className="w-4 h-4 fill-current" />
@@ -100,8 +98,8 @@ export default function Toolbar({
           </button>
           <button
             onClick={onReset}
-            disabled={!selectedDate || locked}
-            title={locked ? 'Mapping sedang dikunci — buka kunci dulu di bagian Armada Logistik' : 'Reset alokasi manual dan algoritma'}
+            disabled={!selectedDate}
+            title="Reset alokasi manual dan algoritma (armada yang dikunci tidak ikut ter-reset)"
             className="shrink-0 bg-slate-100 dark:bg-[#1c1d26] hover:bg-slate-200 dark:hover:bg-[#222431] text-slate-600 dark:text-slate-300 font-semibold p-2.5 rounded-xl flex items-center justify-center cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <RotateCcw className="w-4 h-4" />
