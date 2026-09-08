@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { PlusCircle, Truck } from 'lucide-react';
+import { Truck } from 'lucide-react';
 
 import Header from './components/Header';
 import Toolbar from './components/Toolbar';
@@ -451,23 +451,13 @@ export default function App() {
           onReset={handleReset}
         />
 
-        <div className="flex items-start gap-2">
-          <div className="flex-1">
-            <FleetPicker
-              fleetRows={fleetRows}
-              activeFleetKeys={activeFleetKeys}
-              onActiveFleetKeysChange={setActiveFleetKeys}
-              onDeleteVehicle={handleDeleteVehicle}
-            />
-          </div>
-          <button
-            onClick={() => setAddVehicleOpen(true)}
-            title="Tambah armada baru (L300 / NKEL)"
-            className="no-print shrink-0 p-3 rounded-2xl border border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-500/20 cursor-pointer"
-          >
-            <PlusCircle className="w-4 h-4" />
-          </button>
-        </div>
+        <FleetPicker
+          fleetRows={fleetRows}
+          activeFleetKeys={activeFleetKeys}
+          onActiveFleetKeysChange={setActiveFleetKeys}
+          onDeleteVehicle={handleDeleteVehicle}
+          onAddVehicleClick={() => setAddVehicleOpen(true)}
+        />
 
         <StatsRow
           totalNota={orderIdsForDate.length}

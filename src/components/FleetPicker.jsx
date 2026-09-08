@@ -1,7 +1,7 @@
-import { Weight, Box, Ruler, Trash2 } from 'lucide-react';
+import { Weight, Box, Ruler, Trash2, PlusCircle } from 'lucide-react';
 import { fleetRowKey } from '../utils/allocation';
 
-export default function FleetPicker({ fleetRows, activeFleetKeys, onActiveFleetKeysChange, onDeleteVehicle }) {
+export default function FleetPicker({ fleetRows, activeFleetKeys, onActiveFleetKeysChange, onDeleteVehicle, onAddVehicleClick }) {
   function toggle(key) {
     const next = new Set(activeFleetKeys);
     if (next.has(key)) next.delete(key);
@@ -34,6 +34,13 @@ export default function FleetPicker({ fleetRows, activeFleetKeys, onActiveFleetK
           </button>
           <button onClick={selectNone} className="text-rose-600 dark:text-rose-400 hover:underline cursor-pointer">
             Kosongkan Semua
+          </button>
+          <button
+            onClick={onAddVehicleClick}
+            title="Tambah armada baru (L300 / NKEL)"
+            className="flex items-center justify-center w-6 h-6 rounded-full border border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-500/20 cursor-pointer"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
