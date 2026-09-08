@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Truck, Upload, PackagePlus, Ruler, Moon, Sun, MapPinned } from 'lucide-react';
+import { Truck, Upload, PackagePlus, Ruler, Moon, Sun, MapPinned, Cloud, CloudOff, RefreshCw, AlertTriangle } from 'lucide-react';
 import {
   parseOrdersExcel,
   parseOrdersCSV,
@@ -8,6 +8,24 @@ import {
   parseCustomCatalogExcel,
 } from '../utils/excelImport';
 import { parseWarehouseLocationExcel } from '../utils/warehouseLocations';
+
+function SyncStatusBadge({ status }) {
+  const map = {
+    idle: null,
+    loading: { icon: RefreshCw, cls: 'text-slate-400 animate-spin', label: 'Menyinkron…' },
+    synced: { icon: Cloud, cls: 'text-emerald-500', label: 'Tersinkron ke cloud' },
+    'local-only': { icon: CloudOff, cls: 'text-slate-400', label: 'Firebase belum di-setup — data cuma tersimpan lokal' },
+    error: { icon: AlertTriangle, cls: 'text-rose-500', label: 'Gagal sinkron ke cloud, data tersimpan lokal saja' },
+  };
+  const cfg = map[status];
+  if (!cfg) return null;
+  const Icon = cfg.icon;
+  return (
+    <span title={cfg.label} className="shrink-0 flex items-center px-1.5">
+      <Icon className={`w-4 h-4 ${cfg.cls}`} />
+    </span>
+  );
+}
 
 export default function Header({
   rawLines,
@@ -19,6 +37,7 @@ export default function Header({
   onOpenSizeWeight,
   warehouseLocations,
   onWarehouseLocationsChange,
+  cloudSyncStatus,
 }) {
   const ordersInputRef = useRef(null);
   const catalogInputRef = useRef(null);
@@ -142,6 +161,8 @@ export default function Header({
             <span className="text-[9px] font-mono text-slate-400">({Object.keys(warehouseLocations).length})</span>
           )}
         </button>
+
+        <SyncStatusBadge status={cloudSyncStatus} />
 
         <button
           onClick={onToggleTheme}

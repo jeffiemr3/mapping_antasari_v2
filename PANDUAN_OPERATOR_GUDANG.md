@@ -34,6 +34,12 @@ menulis data manifest kalian secara bebas.
         ".read": true,
         ".write": "!data.exists() && newData.child('appToken').val() === 'v1dzx2GU6dm2_Leyyi1NEL86LmhWSy1u'"
       }
+    },
+    "sharedData": {
+      ".read": true,
+      "$key": {
+        ".write": "newData.child('appToken').val() === 'v1dzx2GU6dm2_Leyyi1NEL86LmhWSy1u'"
+      }
     }
   }
 }
@@ -42,6 +48,7 @@ menulis data manifest kalian secara bebas.
 Penjelasan singkat:
 - **Baca (`.read: true`)** dibuka untuk siapa saja yang tahu link/kode manifest-nya (mirip kirim link Google Drive) — supaya operator tidak perlu login segala.
 - **Tulis** hanya boleh kalau (a) kode itu belum pernah dipakai sebelumnya (`!data.exists()`, jadi manifest yang sudah terkirim tidak bisa ditimpa/diubah orang lain), DAN (b) menyertakan `appToken` yang sama persis dengan yang tertanam di aplikasi (`v1dzx2GU6dm2_Leyyi1NEL86LmhWSy1u` — nilai ini sudah saya isikan otomatis di file `.env.local` project kalian, dan itu juga yang perlu kalian isi di Environment Variables Vercel pada langkah 2). Ini mencegah bot yang asal coba-coba nulis ke Firebase publik.
+- Path baru **`sharedData`** (dijelaskan di bagian 3B di bawah) sengaja BOLEH ditimpa berkali-kali (tidak ada `!data.exists()`) — karena memang tujuannya menyimpan versi "saat ini" dari data Penjualan & Lokasi Gudang, yang wajar berubah tiap kali ada upload baru.
 
 > Kalau suatu saat mau ganti token rahasia ini (disarankan sebelum repo di-push ke GitHub **publik**), ganti nilainya di sini DAN di `VITE_APP_WRITE_TOKEN` (env lokal & Vercel) secara bersamaan — kalau beda, fitur kirim manifest akan gagal terus.
 
@@ -74,6 +81,16 @@ Supaya manifest yang dilihat operator menunjukkan **rak/zona pengambilan** tiap 
 2. Bagian **Import Lokasi Gudang** → upload file export **Report Stock Warehouse By Location** langsung dari sistem toko (`.xlsx`, tidak perlu diedit dulu).
 3. Selesai — sekarang setiap kali "Kirim ke Operator" dipakai, tiap barang otomatis dicocokkan ke lokasi rak berdasarkan Item No (kalau ketemu). Barang yang lokasinya tidak ketemu di file tetap muncul di daftar operator, ditandai "⚠️ Lokasi belum diketahui" supaya tidak hilang begitu saja dari checklist.
 4. File ini disimpan di localStorage browser dispatcher saja (sama seperti data lain) — cukup import ulang kalau berpindah device/browser, atau setiap kali ada perubahan lokasi rak yang signifikan.
+
+## 3B. Sinkron otomatis Penjualan & Lokasi Gudang lintas device (BARU)
+
+Sebelumnya, data **Penjualan** (tombol "Penjualan" di header) dan **Lokasi Gudang** cuma tersimpan di localStorage — jadi kalau dispatcher pindah komputer/browser, harus upload ulang dari nol. Sekarang, begitu Security Rules di atas sudah di-Publish (poin 1), kedua upload ini **otomatis ikut tersimpan ke Firebase** juga:
+
+- Setiap kali upload file **Penjualan** atau **Lokasi Gudang** berhasil diproses, datanya (sudah dalam bentuk JSON ringkas, bukan file Excel mentah) otomatis dikirim ke Firebase, menimpa versi sebelumnya.
+- Setiap kali aplikasi dibuka (device/browser apa saja), otomatis ambil versi TERAKHIR yang tersimpan di Firebase — jadi tidak perlu upload ulang kecuali memang ada file baru yang mau menggantikan data lama.
+- Ada ikon kecil di pojok kanan header (dekat tombol Mode Gelap) yang menunjukkan status: ☁️ hijau = tersinkron, muter = lagi proses, ⚠️ = gagal sinkron (data tetap aman di localStorage device itu, tapi belum ke-share ke device lain).
+
+Catatan: fitur ini baru menyinkronkan Penjualan & Lokasi Gudang. Data lain (armada, hasil Auto Mapping/alokasi, Master Item, dst) untuk saat ini masih localStorage-per-device seperti sebelumnya — bisa menyusul kalau dibutuhkan.
 
 ## 4. Cara pakai sehari-hari (ringkas)
 

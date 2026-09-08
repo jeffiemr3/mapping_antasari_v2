@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PlusCircle, Truck } from 'lucide-react';
 
 import Header from './components/Header';
@@ -27,6 +27,8 @@ import { autoAllocate, fleetRowKey } from './utils/allocation';
 import { findOversizedSingleOrders } from './utils/allocation';
 import { splitOrderInRawLines } from './utils/splitNota';
 import { getOrPromptApiKey, geocodeAddress } from './utils/geocode';
+import { saveSharedData, loadSharedData } from './utils/sharedDataSync';
+import { isFirebaseConfigured } from './lib/firebase';
 import { DEFAULT_WAREHOUSE } from './data/constants';
 import { toDDMMYYYY } from './utils/format';
 import fleetSeed from './data/fleetSeed.json';
@@ -58,6 +60,62 @@ export default function App() {
   const [focusedVehicleIdx, setFocusedVehicleIdx] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
+  // 'idle' | 'loading' | 'synced' | 'local-only' | 'error'
+  const [cloudSyncStatus, setCloudSyncStatus] = useState('idle');
+
+  // Begitu app dibuka, tarik dulu versi Penjualan & Lokasi Gudang TERAKHIR
+  // yang pernah diupload (dari device manapun) dari Firebase - supaya tidak
+  // perlu upload ulang tiap ganti device/browser. Kalau Firebase belum
+  // di-setup atau belum ada data di sana sama sekali, diam-diam tetap pakai
+  // apa yang ada di localStorage seperti biasa (tidak mengganggu).
+  useEffect(() => {
+    if (!isFirebaseConfigured) {
+      setCloudSyncStatus('local-only');
+      return;
+    }
+    let cancelled = false;
+    setCloudSyncStatus('loading');
+    Promise.all([loadSharedData('orders'), loadSharedData('warehouseLocations')])
+      .then(([ordersResult, locationsResult]) => {
+        if (cancelled) return;
+        if (ordersResult?.data) setRawLines(ordersResult.data);
+        if (locationsResult?.data) setWarehouseLocations(locationsResult.data);
+        setCloudSyncStatus('synced');
+      })
+      .catch(() => {
+        if (!cancelled) setCloudSyncStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Dipanggil Header setelah rawLines baru berhasil di-parse dari file upload. */
+  async function handleRawLinesUploaded(newRawLines) {
+    setRawLines(newRawLines);
+    if (!isFirebaseConfigured) return;
+    setCloudSyncStatus('loading');
+    try {
+      await saveSharedData('orders', newRawLines);
+      setCloudSyncStatus('synced');
+    } catch {
+      setCloudSyncStatus('error');
+    }
+  }
+
+  /** Dipanggil Header setelah data Lokasi Gudang baru berhasil di-parse dari file upload. */
+  async function handleWarehouseLocationsUploaded(newIndex) {
+    setWarehouseLocations(newIndex);
+    if (!isFirebaseConfigured) return;
+    setCloudSyncStatus('loading');
+    try {
+      await saveSharedData('warehouseLocations', newIndex);
+      setCloudSyncStatus('synced');
+    } catch {
+      setCloudSyncStatus('error');
+    }
+  }
   const [sizeWeightOpen, setSizeWeightOpen] = useState(false);
   const [splitNotaId, setSplitNotaId] = useState(null);
   const [geocodingId, setGeocodingId] = useState(null);
@@ -310,14 +368,15 @@ export default function App() {
     <div className="min-h-screen flex flex-col">
       <Header
         rawLines={rawLines}
-        onRawLinesChange={setRawLines}
+        onRawLinesChange={handleRawLinesUploaded}
         customCatalog={customCatalog}
         onCustomCatalogChange={setCustomCatalog}
         theme={theme}
         onToggleTheme={toggleTheme}
         onOpenSizeWeight={() => setSizeWeightOpen(true)}
         warehouseLocations={warehouseLocations}
-        onWarehouseLocationsChange={setWarehouseLocations}
+        onWarehouseLocationsChange={handleWarehouseLocationsUploaded}
+        cloudSyncStatus={cloudSyncStatus}
       />
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 space-y-4">
