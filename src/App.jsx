@@ -62,6 +62,14 @@ export default function App() {
   const [addVehicleOpen, setAddVehicleOpen] = useState(false);
   // 'idle' | 'loading' | 'synced' | 'local-only' | 'error'
   const [cloudSyncStatus, setCloudSyncStatus] = useState('idle');
+  // Kapan Penjualan (OTS NP) & Lokasi Gudang (SWBL) terakhir diupdate -
+  // ditampilkan di tombol header. Disimpan juga di localStorage supaya
+  // tetap kelihatan walau reload sebelum Firebase selesai dicek.
+  const [ordersUpdatedAt, setOrdersUpdatedAt] = useLocalStorage('m10_orders_updated_at', null);
+  const [warehouseLocationsUpdatedAt, setWarehouseLocationsUpdatedAt] = useLocalStorage(
+    'm10_warehouse_locations_updated_at',
+    null
+  );
 
   // Begitu app dibuka, tarik dulu versi Penjualan & Lokasi Gudang TERAKHIR
   // yang pernah diupload (dari device manapun) dari Firebase - supaya tidak
@@ -86,8 +94,12 @@ export default function App() {
           const changed = JSON.stringify(ordersResult.data) !== JSON.stringify(rawLines);
           setRawLines(ordersResult.data);
           if (changed) setDispatch(EMPTY_DISPATCH);
+          if (ordersResult.updatedAt) setOrdersUpdatedAt(ordersResult.updatedAt);
         }
-        if (locationsResult?.data) setWarehouseLocations(locationsResult.data);
+        if (locationsResult?.data) {
+          setWarehouseLocations(locationsResult.data);
+          if (locationsResult.updatedAt) setWarehouseLocationsUpdatedAt(locationsResult.updatedAt);
+        }
         setCloudSyncStatus('synced');
       })
       .catch(() => {
@@ -108,6 +120,7 @@ export default function App() {
     // akan dapat undefined dan bisa crash. Reset alokasi supaya dispatcher
     // jalankan ulang Auto Mapping dengan data yang sudah pasti sinkron.
     setDispatch(EMPTY_DISPATCH);
+    setOrdersUpdatedAt(Date.now());
     if (!isFirebaseConfigured) return;
     setCloudSyncStatus('loading');
     try {
@@ -121,6 +134,7 @@ export default function App() {
   /** Dipanggil Header setelah data Lokasi Gudang baru berhasil di-parse dari file upload. */
   async function handleWarehouseLocationsUploaded(newIndex) {
     setWarehouseLocations(newIndex);
+    setWarehouseLocationsUpdatedAt(Date.now());
     if (!isFirebaseConfigured) return;
     setCloudSyncStatus('loading');
     try {
@@ -391,6 +405,8 @@ export default function App() {
         warehouseLocations={warehouseLocations}
         onWarehouseLocationsChange={handleWarehouseLocationsUploaded}
         cloudSyncStatus={cloudSyncStatus}
+        ordersUpdatedAt={ordersUpdatedAt}
+        warehouseLocationsUpdatedAt={warehouseLocationsUpdatedAt}
       />
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 space-y-4">

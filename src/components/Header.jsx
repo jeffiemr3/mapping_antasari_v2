@@ -27,6 +27,17 @@ function SyncStatusBadge({ status }) {
   );
 }
 
+/** "08/09 14:05" - ringkas, cukup buat sekilas lihat data ini seberapa baru. */
+function formatUpdatedAt(ts) {
+  if (!ts) return null;
+  const d = new Date(ts);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}/${mm} ${hh}:${min}`;
+}
+
 export default function Header({
   rawLines,
   onRawLinesChange,
@@ -38,6 +49,8 @@ export default function Header({
   warehouseLocations,
   onWarehouseLocationsChange,
   cloudSyncStatus,
+  ordersUpdatedAt,
+  warehouseLocationsUpdatedAt,
 }) {
   const ordersInputRef = useRef(null);
   const catalogInputRef = useRef(null);
@@ -125,51 +138,65 @@ export default function Header({
         <input ref={ordersInputRef} type="file" accept=".xlsx,.xls,.csv,.json" onChange={handleOrdersFile} className="hidden" />
         <button
           onClick={() => ordersInputRef.current?.click()}
+          title="Upload data Penjualan (OTS NP)"
           className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1c1d26] cursor-pointer"
         >
           <Upload className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
-          <span className="hidden sm:inline">Penjualan</span>
+          <span className="hidden sm:flex flex-col items-start leading-none">
+            <span>OTS NP</span>
+            {ordersUpdatedAt && (
+              <span className="text-[9px] font-normal text-slate-400 mt-0.5">{formatUpdatedAt(ordersUpdatedAt)}</span>
+            )}
+          </span>
         </button>
 
         <input ref={catalogInputRef} type="file" accept=".xlsx,.xls" onChange={handleCatalogFile} className="hidden" />
         <button
           onClick={() => catalogInputRef.current?.click()}
-          className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1c1d26] cursor-pointer"
+          title="Master Item"
+          className="shrink-0 flex items-center gap-1.5 text-xs font-semibold p-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1c1d26] cursor-pointer"
         >
           <PackagePlus className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
-          <span className="hidden sm:inline">Master Item</span>
         </button>
 
         <button
           onClick={onOpenSizeWeight}
-          title="Cadangan berat/box berdasarkan ukuran, dipakai kalau kode barang tidak ada di Master Item"
-          className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1c1d26] cursor-pointer"
+          title="Master Tambahan — cadangan berat/box berdasarkan ukuran, dipakai kalau kode barang tidak ada di Master Item"
+          className="shrink-0 flex items-center gap-1.5 text-xs font-semibold p-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1c1d26] cursor-pointer"
         >
           <Ruler className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-          <span className="hidden sm:inline">Master Tambahan</span>
         </button>
 
         <input ref={locationInputRef} type="file" accept=".xlsx,.xls" onChange={handleLocationFile} className="hidden" />
         <button
           onClick={() => locationInputRef.current?.click()}
-          title="Import Report Stock Warehouse By Location, supaya tampilan operator gudang tahu rak pengambilan tiap barang"
+          title="Import Report Stock Warehouse By Location (SWBL), supaya tampilan operator gudang tahu rak pengambilan tiap barang"
           className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1c1d26] cursor-pointer"
         >
           <MapPinned className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
-          <span className="hidden sm:inline">Lokasi Gudang</span>
-          {warehouseLocations && (
-            <span className="text-[9px] font-mono text-slate-400">({Object.keys(warehouseLocations).length})</span>
-          )}
+          <span className="hidden sm:flex flex-col items-start leading-none">
+            <span className="flex items-center gap-1">
+              SWBL
+              {warehouseLocations && (
+                <span className="text-[9px] font-mono text-slate-400">({Object.keys(warehouseLocations).length})</span>
+              )}
+            </span>
+            {warehouseLocationsUpdatedAt && (
+              <span className="text-[9px] font-normal text-slate-400 mt-0.5">
+                {formatUpdatedAt(warehouseLocationsUpdatedAt)}
+              </span>
+            )}
+          </span>
         </button>
 
         <SyncStatusBadge status={cloudSyncStatus} />
 
         <button
           onClick={onToggleTheme}
-          className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1c1d26] cursor-pointer"
+          title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
+          className="shrink-0 flex items-center gap-1.5 text-xs font-semibold p-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#1c1d26] cursor-pointer"
         >
           {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" /> : <Moon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />}
-          <span className="hidden sm:inline">{theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}</span>
         </button>
       </div>
     </header>
