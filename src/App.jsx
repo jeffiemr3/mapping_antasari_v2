@@ -83,8 +83,8 @@ export default function App() {
     }
     let cancelled = false;
     setCloudSyncStatus('loading');
-    Promise.all([loadSharedData('orders'), loadSharedData('warehouseLocations')])
-      .then(([ordersResult, locationsResult]) => {
+    Promise.all([loadSharedData('orders'), loadSharedData('warehouseLocations'), loadSharedData('fleet')])
+      .then(([ordersResult, locationsResult, fleetResult]) => {
         if (cancelled) return;
         if (ordersResult?.data) {
           // Cuma reset alokasi kalau datanya BEDA dari yang sudah ada di
@@ -100,6 +100,7 @@ export default function App() {
           setWarehouseLocations(locationsResult.data);
           if (locationsResult.updatedAt) setWarehouseLocationsUpdatedAt(locationsResult.updatedAt);
         }
+        if (fleetResult?.data) setFleetRows(fleetResult.data);
         setCloudSyncStatus('synced');
       })
       .catch(() => {
@@ -110,6 +111,18 @@ export default function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** Simpan daftar armada terbaru ke Firebase (dipanggil setiap kali fleetRows berubah). */
+  async function syncFleetToFirebase(newFleetRows) {
+    if (!isFirebaseConfigured) return;
+    setCloudSyncStatus('loading');
+    try {
+      await saveSharedData('fleet', newFleetRows);
+      setCloudSyncStatus('synced');
+    } catch {
+      setCloudSyncStatus('error');
+    }
+  }
 
   /** Dipanggil Header setelah rawLines baru berhasil di-parse dari file upload. */
   async function handleRawLinesUploaded(newRawLines) {
@@ -293,9 +306,22 @@ export default function App() {
   /** Tambah satu armada baru (dari tombol "+ Tambah Armada"). Otomatis diaktifkan
    * kalau sebelumnya user sudah pernah menyunting pilihan armada aktif secara manual. */
   function handleAddVehicle(newRow) {
-    setFleetRows([...fleetRows, newRow]);
+    const next = [...fleetRows, newRow];
+    setFleetRows(next);
+    syncFleetToFirebase(next);
     if (activeFleetKeysArray !== null) {
       setActiveFleetKeysArray([...activeFleetKeysArray, fleetRowKey(newRow)]);
+    }
+  }
+
+  /** Hapus satu armada dari daftar (tombol tempat sampah di kartu armada). */
+  function handleDeleteVehicle(rowToDelete) {
+    const key = fleetRowKey(rowToDelete);
+    const next = fleetRows.filter((r) => fleetRowKey(r) !== key);
+    setFleetRows(next);
+    syncFleetToFirebase(next);
+    if (activeFleetKeysArray !== null) {
+      setActiveFleetKeysArray(activeFleetKeysArray.filter((k) => k !== key));
     }
   }
 
@@ -427,7 +453,12 @@ export default function App() {
 
         <div className="flex items-start gap-2">
           <div className="flex-1">
-            <FleetPicker fleetRows={fleetRows} activeFleetKeys={activeFleetKeys} onActiveFleetKeysChange={setActiveFleetKeys} />
+            <FleetPicker
+              fleetRows={fleetRows}
+              activeFleetKeys={activeFleetKeys}
+              onActiveFleetKeysChange={setActiveFleetKeys}
+              onDeleteVehicle={handleDeleteVehicle}
+            />
           </div>
           <button
             onClick={() => setAddVehicleOpen(true)}
@@ -540,7 +571,14 @@ export default function App() {
       <Footer />
 
       {settingsOpen && (
-        <SettingsModal onClose={() => setSettingsOpen(false)} fleetRows={fleetRows} onFleetChange={setFleetRows} />
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          fleetRows={fleetRows}
+          onFleetChange={(rows) => {
+            setFleetRows(rows);
+            syncFleetToFirebase(rows);
+          }}
+        />
       )}
       {addVehicleOpen && (
         <AddVehicleModal

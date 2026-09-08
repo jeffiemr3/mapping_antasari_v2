@@ -1,7 +1,7 @@
-import { Weight, Box, Ruler } from 'lucide-react';
+import { Weight, Box, Ruler, Trash2 } from 'lucide-react';
 import { fleetRowKey } from '../utils/allocation';
 
-export default function FleetPicker({ fleetRows, activeFleetKeys, onActiveFleetKeysChange }) {
+export default function FleetPicker({ fleetRows, activeFleetKeys, onActiveFleetKeysChange, onDeleteVehicle }) {
   function toggle(key) {
     const next = new Set(activeFleetKeys);
     if (next.has(key)) next.delete(key);
@@ -13,6 +13,13 @@ export default function FleetPicker({ fleetRows, activeFleetKeys, onActiveFleetK
   }
   function selectNone() {
     onActiveFleetKeysChange(new Set());
+  }
+  function handleDelete(e, row) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm(`Hapus armada "${row.vehicle}" (${row.driver}, ${row.plate}) dari daftar?`)) {
+      onDeleteVehicle(row);
+    }
   }
 
   return (
@@ -49,7 +56,16 @@ export default function FleetPicker({ fleetRows, activeFleetKeys, onActiveFleetK
                   <input type="checkbox" checked={checked} onChange={() => toggle(key)} className="accent-orange-500 shrink-0" />
                   <span className="font-bold text-xs text-slate-900 dark:text-white truncate">{row.driver}</span>
                 </div>
-                <span className="text-[9px] font-mono text-slate-400 shrink-0">{row.plate}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-[9px] font-mono text-slate-400">{row.plate}</span>
+                  <button
+                    onClick={(e) => handleDelete(e, row)}
+                    title="Hapus armada ini"
+                    className="text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer p-0.5 -m-0.5"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
               <p className="text-[10px] text-slate-500 dark:text-slate-400">{row.vehicle}</p>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9.5px] text-slate-500 dark:text-slate-400">

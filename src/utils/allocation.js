@@ -36,6 +36,12 @@ export function fleetRowKey(row) {
   return `${row.driver}|${row.vehicle}|${row.plate}`;
 }
 
+/** Normalisasi plat nomor buat dibandingkan: hilangkan SEMUA spasi + uppercase,
+ * supaya "BE 8970 AMF", "BE8970AMF", "be 8970 amf" dianggap plat yang SAMA. */
+export function normalizePlate(plate) {
+  return (plate || '').replace(/\s+/g, '').toUpperCase();
+}
+
 /** Jarak Haversine antara dua koordinat, dalam kilometer. */
 export function haversineKm(lat1, lng1, lat2, lng2) {
   const dLat = ((lat2 - lat1) * Math.PI) / 180;

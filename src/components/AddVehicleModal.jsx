@@ -1,13 +1,29 @@
-import { useState } from 'react';
-import { X, PlusCircle, Weight, Box, Ruler, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, PlusCircle, Weight, Box, Ruler, Settings, Sparkles } from 'lucide-react';
 import { VEHICLE_TYPE_PRESETS } from '../data/constants';
-import { fleetRowKey } from '../utils/allocation';
+import { fleetRowKey, normalizePlate } from '../utils/allocation';
 
-/** Hitung nomor RIT berikutnya untuk nomor polisi yang sama (RIT 1, 2, 3, ...). */
+/** Cari baris armada existing dengan plat yang SAMA (setelah dinormalisasi). */
+function findByPlate(fleetRows, plate) {
+  const normalized = normalizePlate(plate);
+  if (!normalized) return [];
+  return fleetRows.filter((r) => normalizePlate(r.plate) === normalized);
+}
+
+/** Hitung nomor RIT berikutnya untuk nomor polisi yang sama (RIT 1, 2, 3, ...),
+ * plat dibandingkan setelah dinormalisasi (tanpa spasi) supaya "BE8970AMF" dan
+ * "BE 8970 AMF" dianggap plat yang sama. */
 function nextRitNumber(fleetRows, plate) {
-  const normalized = plate.trim().toUpperCase();
-  const count = fleetRows.filter((r) => r.plate.trim().toUpperCase() === normalized).length;
-  return count + 1;
+  return findByPlate(fleetRows, plate).length + 1;
+}
+
+/** Dari daftar armada existing dgn plat yg sama, tebak tipe armadanya (mis. "L300
+ * RIT 2" -> "L300") supaya form otomatis pilih tipe yang sama, bukan minta user
+ * pilih ulang manual (rawan salah pilih beda tipe utk 1 fisik truk yang sama). */
+function guessTypeFromExisting(rows) {
+  if (rows.length === 0) return null;
+  const baseName = (rows[0].vehicle || '').replace(/\s*RIT\s*\d+\s*$/i, '').trim().toUpperCase();
+  return Object.keys(VEHICLE_TYPE_PRESETS).find((t) => t.toUpperCase() === baseName) || null;
 }
 
 export default function AddVehicleModal({ fleetRows, onAddVehicle, onClose, onOpenAdvancedSettings }) {
@@ -15,6 +31,21 @@ export default function AddVehicleModal({ fleetRows, onAddVehicle, onClose, onOp
   const [plate, setPlate] = useState('');
   const [driver, setDriver] = useState('');
   const [error, setError] = useState('');
+
+  const existingWithSamePlate = findByPlate(fleetRows, plate);
+  const isKnownPlate = existingWithSamePlate.length > 0;
+  const upcomingRit = nextRitNumber(fleetRows, plate);
+
+  // Begitu plat yang diketik cocok sama armada yang sudah ada, otomatis
+  // samakan tipe & tawarkan nama supir yang sama (truk fisiknya kan sama) -
+  // tinggal dikonfirmasi/diedit, tidak perlu isi ulang dari nol.
+  useEffect(() => {
+    if (existingWithSamePlate.length === 0) return;
+    const guessedType = guessTypeFromExisting(existingWithSamePlate);
+    if (guessedType) setType(guessedType);
+    if (!driver.trim()) setDriver(existingWithSamePlate[0].driver);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingWithSamePlate.length]);
 
   const preset = VEHICLE_TYPE_PRESETS[type];
 
@@ -90,6 +121,12 @@ export default function AddVehicleModal({ fleetRows, onAddVehicle, onClose, onOp
             placeholder="BE 1234 XX"
             className="w-full text-sm font-mono font-bold uppercase border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1d26] text-slate-900 dark:text-white rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-orange-500"
           />
+          {isKnownPlate && (
+            <p className="text-[10.5px] text-teal-600 dark:text-teal-400 font-semibold flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              Plat ini sudah ada ({existingWithSamePlate.length} rit) &mdash; otomatis jadi <strong>RIT {upcomingRit}</strong>
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
