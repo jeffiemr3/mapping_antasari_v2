@@ -36,6 +36,21 @@ import sizeWeightSeed from './data/sizeWeightSeed.json';
 
 const EMPTY_DISPATCH = { drivers: [], assignments: [], unallocated: [], gudangIds: [], lockedVehicleKeys: [] };
 
+/** Pastikan objek dispatch SELALU punya semua field dengan tipe yang benar
+ * (array), apapun sumbernya - localStorage lama dari versi sebelum sebuah
+ * field ditambahkan, data dari Firebase yang bentuknya beda, dst. Tanpa ini,
+ * field yang hilang (mis. "unallocated" dari versi lama) bikin seluruh app
+ * crash blank putih begitu ada kode yang manggil .filter()/.flat() padanya. */
+function normalizeDispatch(d) {
+  return {
+    drivers: Array.isArray(d?.drivers) ? d.drivers : [],
+    assignments: Array.isArray(d?.assignments) ? d.assignments : [],
+    unallocated: Array.isArray(d?.unallocated) ? d.unallocated : [],
+    gudangIds: Array.isArray(d?.gudangIds) ? d.gudangIds : [],
+    lockedVehicleKeys: Array.isArray(d?.lockedVehicleKeys) ? d.lockedVehicleKeys : [],
+  };
+}
+
 export default function App() {
   const { theme, toggleTheme } = useTheme();
 
@@ -46,7 +61,18 @@ export default function App() {
   const [fleetRows, setFleetRows] = useLocalStorage(STORAGE_KEYS.FLEET, fleetSeed);
   const [warehouse, setWarehouse] = useLocalStorage(STORAGE_KEYS.WAREHOUSE, DEFAULT_WAREHOUSE);
   const [warehouseLocations, setWarehouseLocations] = useLocalStorage(STORAGE_KEYS.WAREHOUSE_LOCATIONS, null);
-  const [dispatch, setDispatch] = useLocalStorage(STORAGE_KEYS.ALLOCATIONS, EMPTY_DISPATCH);
+  const [dispatchRaw, setDispatchRaw] = useLocalStorage(STORAGE_KEYS.ALLOCATIONS, EMPTY_DISPATCH);
+  const dispatch = useMemo(() => normalizeDispatch(dispatchRaw), [dispatchRaw]);
+  /** Pengganti setDispatch biasa - selalu menormalisasi hasil akhirnya
+   * (baik dikasih objek baru langsung, maupun fungsi updater) sebelum
+   * disimpan, supaya field yang belum ada tetap terisi default aman. */
+  function setDispatch(updater) {
+    setDispatchRaw((prev) => {
+      const prevNormalized = normalizeDispatch(prev);
+      const next = typeof updater === 'function' ? updater(prevNormalized) : updater;
+      return normalizeDispatch(next);
+    });
+  }
   const [orderOverrides, setOrderOverrides] = useLocalStorage(STORAGE_KEYS.ORDER_OVERRIDES, {});
 
   // ---- Pengaturan tampilan (persisten) ------------------------------------
