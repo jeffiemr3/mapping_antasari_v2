@@ -353,6 +353,19 @@ export default function App() {
     }));
   }
 
+  /** Setelah nota di-reschedule (tanggal Promised-nya diubah lewat panel "Atur
+   * Jadwal Nota"), keluarkan dari rute armada manapun kalau kebetulan sudah
+   * pernah dialokasikan sebelumnya (tanggalnya kan sudah beda, jadi tidak
+   * pas lagi ikut rute hari ini), lalu masukkan ke "Belum Teralokasi" supaya
+   * langsung kelihatan & siap dialokasikan ulang. */
+  function handleRescheduleOrder(npno) {
+    setDispatch((d) => ({
+      ...d,
+      assignments: d.assignments.map((arr) => arr.filter((id) => id !== npno)),
+      unallocated: d.unallocated.includes(npno) ? d.unallocated : [...d.unallocated, npno],
+    }));
+  }
+
   /** Titip nota "Amsen" ke Gudang (bukan dikirim pakai armada). Nanti ikut
    * terkirim ke operator sebagai tab "Titipan Gudang" tersendiri. */
   function handleAddToGudang(npno) {
@@ -712,7 +725,12 @@ export default function App() {
           </div>
 
           <div className="space-y-4">
-            <ReschedulePanel rawLines={rawLines} onRawLinesChange={setRawLines} ordersMap={ordersMap} />
+            <ReschedulePanel
+              rawLines={rawLines}
+              onRawLinesChange={setRawLines}
+              ordersMap={ordersMap}
+              onRescheduled={handleRescheduleOrder}
+            />
             <UnallocatedList
               unallocatedIds={unallocatedIdsToShow}
               ordersMap={ordersMap}

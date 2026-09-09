@@ -13,7 +13,7 @@ function inputValueToDdmmyyyy(value) {
   return `${dd}-${mm}-${yyyy}`;
 }
 
-export default function ReschedulePanel({ rawLines, onRawLinesChange, ordersMap }) {
+export default function ReschedulePanel({ rawLines, onRawLinesChange, ordersMap, onRescheduled }) {
   const [open, setOpen] = useState(true);
   const [npno, setNpno] = useState('');
   const [newDate, setNewDate] = useState('');
@@ -65,6 +65,7 @@ export default function ReschedulePanel({ rawLines, onRawLinesChange, ordersMap 
       };
       onRawLinesChange([newLine, ...rawLines]);
     }
+    onRescheduled?.(npno.trim());
     setSuccess(true);
     setTimeout(() => setSuccess(false), 2500);
     setNpno('');
