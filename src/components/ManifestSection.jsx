@@ -455,7 +455,7 @@ export default function ManifestSection({
   warehouseLocations,
   gudangIds = [],
 }) {
-  const totalAssigned = assignments.reduce((sum, arr) => sum + arr.length, 0);
+  const totalAssigned = assignments.reduce((sum, arr) => sum + (arr?.length || 0), 0);
   const [sendModalOpen, setSendModalOpen] = useState(false);
 
   return (

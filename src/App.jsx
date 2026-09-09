@@ -40,11 +40,20 @@ const EMPTY_DISPATCH = { drivers: [], assignments: [], unallocated: [], gudangId
  * (array), apapun sumbernya - localStorage lama dari versi sebelum sebuah
  * field ditambahkan, data dari Firebase yang bentuknya beda, dst. Tanpa ini,
  * field yang hilang (mis. "unallocated" dari versi lama) bikin seluruh app
- * crash blank putih begitu ada kode yang manggil .filter()/.flat() padanya. */
+ * crash blank putih begitu ada kode yang manggil .filter()/.flat() padanya.
+ *
+ * Khusus "assignments": ini array-di-dalam-array (per armada). Firebase
+ * Realtime Database punya kebiasaan mengisi "lubang" array dengan `null`
+ * waktu disimpan/dibaca ulang (mis. kalau ada elemen kosong/undefined di
+ * tengah) - jadi tiap elemen assignments juga dipastikan array yang valid,
+ * dan panjangnya selalu disamakan dengan jumlah drivers. */
 function normalizeDispatch(d) {
+  const drivers = Array.isArray(d?.drivers) ? d.drivers : [];
+  const rawAssignments = Array.isArray(d?.assignments) ? d.assignments : [];
+  const assignments = drivers.map((_, i) => (Array.isArray(rawAssignments[i]) ? rawAssignments[i] : []));
   return {
-    drivers: Array.isArray(d?.drivers) ? d.drivers : [],
-    assignments: Array.isArray(d?.assignments) ? d.assignments : [],
+    drivers,
+    assignments,
     unallocated: Array.isArray(d?.unallocated) ? d.unallocated : [],
     gudangIds: Array.isArray(d?.gudangIds) ? d.gudangIds : [],
     lockedVehicleKeys: Array.isArray(d?.lockedVehicleKeys) ? d.lockedVehicleKeys : [],
