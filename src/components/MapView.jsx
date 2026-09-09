@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { Factory, ArrowLeftRight, Check } from 'lucide-react';
 import { ROUTE_COLORS } from '../data/constants';
+import { clusterOrders } from '../utils/allocation';
 
 export default function MapView({
   drivers,
@@ -11,7 +12,7 @@ export default function MapView({
   focusedVehicleIdx,
   onFocusVehicle,
   onEditOrder,
-  onReorderStop,
+  onReorderCluster,
   onMoveVehicleToIndex,
 }) {
   const containerRef = useRef(null);
@@ -90,11 +91,19 @@ export default function MapView({
       const color = ROUTE_COLORS[vehicleIdx % ROUTE_COLORS.length];
       const path = [[warehouse.lat, warehouse.lng]];
 
-      stopIds.forEach((id, stopIdx) => {
-        const order = ordersMap[id];
-        if (!order || !order.lat || !order.lng) return;
-        path.push([order.lat, order.lng]);
-        bounds.push([order.lat, order.lng]);
+      // Gabungkan nota yang pelanggan/teleponnya sama jadi 1 titik/marker -
+      // supaya nomor & jumlah titik di peta ini SAMA PERSIS dengan jumlah
+      // "stop" yang ditampilkan di tabel Manifest (bukan jumlah nota).
+      const stops = clusterOrders(stopIds, ordersMap).filter((s) => s.lat !== null);
+      const totalStops = stops.length;
+
+      stops.forEach((stop, stopIdx) => {
+        const primary = ordersMap[stop.members[0]];
+        if (!primary) return;
+        path.push([stop.lat, stop.lng]);
+        bounds.push([stop.lat, stop.lng]);
+
+        const isMulti = stop.members.length > 1;
         const stopIcon = L.divIcon({
           html: `<div style="width:28px;height:28px;border-radius:999px;color:#fff;font-weight:bold;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);background-color:${color}">${
             stopIdx + 1
@@ -103,29 +112,42 @@ export default function MapView({
           iconSize: [28, 28],
           iconAnchor: [14, 14],
         });
-        const itemsHtml = order.lines.map((l) => `<li>${l.itemName} (x${l.qty} ${l.uom})</li>`).join('');
-        const totalStops = stopIds.length;
+
+        const itemsHtml = stop.members
+          .flatMap((id) => {
+            const o = ordersMap[id];
+            if (!o) return [];
+            const prefix = isMulti ? `<span style="color:#94a3b8;font-size:10px">${id}:</span> ` : '';
+            return o.lines.map((l) => `<li>${prefix}${l.itemName} (x${l.qty} ${l.uom})</li>`);
+          })
+          .join('');
+        const multiBadge = isMulti
+          ? `<span style="background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:700;padding:2px 6px;border-radius:999px;margin-left:6px;">📦 ${stop.members.length} NOTA · 1 DROP</span>`
+          : '';
+
         const btnStyle =
           'border:none;padding:5px 8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;color:#fff;';
         const orderBtnsHtml = `
           ${stopIdx > 0 ? `<button class="m10-up-btn" style="${btnStyle}background:#0f766e;" title="Naikkan urutan (jadi lebih awal)">⬆️</button>` : ''}
           ${stopIdx < totalStops - 1 ? `<button class="m10-down-btn" style="${btnStyle}background:#0f766e;" title="Turunkan urutan (jadi lebih akhir)">⬇️</button>` : ''}
         `;
-        const marker = L.marker([order.lat, order.lng], { icon: stopIcon })
+        const marker = L.marker([stop.lat, stop.lng], { icon: stopIcon })
           .bindPopup(
-            `<strong>${stopIdx + 1}. ${order.customer}</strong><br/>${order.address}<br/><ul style="margin:4px 0 0;padding-left:16px">${itemsHtml}</ul><div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">${orderBtnsHtml}<button class="m10-edit-stop-btn" style="${btnStyle}background:#4f46e5;">✏️ Edit / Pindahkan</button></div>`
+            `<strong>${stopIdx + 1}. ${primary.customer}</strong>${multiBadge}<br/>${primary.address}<br/><ul style="margin:4px 0 0;padding-left:16px">${itemsHtml}</ul><div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">${orderBtnsHtml}<button class="m10-edit-stop-btn" style="${btnStyle}background:#4f46e5;">✏️ Edit / Pindahkan</button></div>`
           )
           .addTo(markerLayer);
-        if (onEditOrder || onReorderStop) {
+        if (onEditOrder || onReorderCluster) {
           marker.on('popupopen', (e) => {
             const el = e.popup.getElement();
             if (!el) return;
             const editBtn = el.querySelector('.m10-edit-stop-btn');
-            if (editBtn && onEditOrder) editBtn.onclick = () => onEditOrder(id, vehicleIdx, stopIdx, totalStops);
+            if (editBtn && onEditOrder) {
+              editBtn.onclick = () => onEditOrder(stop.members[0], vehicleIdx, stopIdx, totalStops);
+            }
             const upBtn = el.querySelector('.m10-up-btn');
-            if (upBtn && onReorderStop) upBtn.onclick = () => onReorderStop(vehicleIdx, id, -1);
+            if (upBtn && onReorderCluster) upBtn.onclick = () => onReorderCluster(vehicleIdx, stop.members, -1);
             const downBtn = el.querySelector('.m10-down-btn');
-            if (downBtn && onReorderStop) downBtn.onclick = () => onReorderStop(vehicleIdx, id, 1);
+            if (downBtn && onReorderCluster) downBtn.onclick = () => onReorderCluster(vehicleIdx, stop.members, 1);
           });
         }
       });
@@ -138,7 +160,7 @@ export default function MapView({
     if (bounds.length > 1) {
       map.fitBounds(bounds, { padding: [30, 30] });
     }
-  }, [assignments, ordersMap, warehouse, focusedVehicleIdx, onEditOrder, onReorderStop]);
+  }, [assignments, ordersMap, warehouse, focusedVehicleIdx, onEditOrder, onReorderCluster]);
 
   return (
     <div className="flex flex-col h-full gap-1.5">

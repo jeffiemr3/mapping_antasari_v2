@@ -23,7 +23,7 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { useOrders } from './hooks/useOrders';
 import { useTheme } from './hooks/useTheme';
 import { STORAGE_KEYS } from './utils/storage';
-import { autoAllocate, fleetRowKey } from './utils/allocation';
+import { autoAllocate, fleetRowKey, clusterOrders } from './utils/allocation';
 import { findOversizedSingleOrders } from './utils/allocation';
 import { splitOrderInRawLines } from './utils/splitNota';
 import { getOrPromptApiKey, geocodeAddress } from './utils/geocode';
@@ -507,18 +507,24 @@ export default function App() {
     }));
   }
 
-  /** Geser urutan drop satu langkah (naik = lebih awal, turun = lebih akhir) dalam armada yang sama. */
-  function handleReorderStop(vehicleIdx, orderId, direction) {
+  /** Menggeser satu STOP/CLUSTER (bisa
+   * berisi beberapa nota pelanggan yang sama) sebagai satu blok utuh - dipakai
+   * peta, yang menampilkan 1 marker per titik lokasi (bukan per nota), supaya
+   * tombol naik/turun di peta menggeser seluruh nota di titik itu bersamaan,
+   * tidak memisah salah satu notanya saja. */
+  function handleReorderCluster(vehicleIdx, memberIds, direction) {
+    const targetKey = [...memberIds].sort().join(',');
     setDispatch((d) => ({
       ...d,
       assignments: d.assignments.map((arr, i) => {
         if (i !== vehicleIdx) return arr;
-        const idx = arr.indexOf(orderId);
+        const clusters = clusterOrders(arr, ordersMap);
+        const idx = clusters.findIndex((c) => [...c.members].sort().join(',') === targetKey);
         const newIdx = idx + direction;
-        if (idx === -1 || newIdx < 0 || newIdx >= arr.length) return arr;
-        const next = [...arr];
-        [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
-        return next;
+        if (idx === -1 || newIdx < 0 || newIdx >= clusters.length) return arr;
+        const nextClusters = [...clusters];
+        [nextClusters[idx], nextClusters[newIdx]] = [nextClusters[newIdx], nextClusters[idx]];
+        return nextClusters.flatMap((c) => c.members);
       }),
     }));
   }
@@ -727,7 +733,7 @@ export default function App() {
                 onEditOrder={(id, vehicleIdx, stopIdx, totalStops) =>
                   setEditingOrder({ id, vehicleIdx, stopIdx, totalStops })
                 }
-                onReorderStop={handleReorderStop}
+                onReorderCluster={handleReorderCluster}
                 onMoveVehicleToIndex={handleMoveVehicleToIndex}
               />
             </div>
